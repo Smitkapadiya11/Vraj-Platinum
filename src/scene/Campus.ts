@@ -5,24 +5,38 @@ import { SITE, PROPS, type BlockDef, type FlatDef } from '../data/project';
 import { UNITS, type Unit, DIR_VEC } from '../data/units';
 import BALCONIES from '../data/balconies.json';
 import { sunPosition, istDate } from './sun';
-import { PhotoFacades } from './PhotoFacades';
 import { makePalmGeometry, makeCrownGeometry, palmMaterial, crownMaterial } from './Foliage';
 
-// photo-derived tileable textures (public/tex, built by scripts/make_textures.py); size = metres per tile
-const TEX: Record<string, { f: string; m: number; bump?: number }> = {
-  plaster: { f: 'white', m: 1.5, bump: 0.6 }, white: { f: 'white', m: 1.5, bump: 0.6 }, wallw: { f: 'white', m: 1.5, bump: 0.6 },
-  charcoal: { f: 'charcoal', m: 1.5, bump: 0.9 }, lightgrey: { f: 'lightgrey', m: 1.5, bump: 0.6 },
-  wood: { f: 'wood', m: 1.2 }, rust: { f: 'wood', m: 1.2 }, stone: { f: 'stone', m: 1.8 }, bronze: { f: 'bronze', m: 1.5 },
-  paver: { f: 'paver', m: 1.6 }, footpath: { f: 'paver', m: 1.2 }, lawn: { f: 'lawn', m: 4 }, asphalt: { f: 'asphalt', m: 6 },
+// Clean vector-drawn material maps (public/tex, built by scripts/make_textures.py — no photo pixels).
+// m = metres per tile (UVs are world metres, see blender/bcommon.world_uv); n = has a normal map.
+// Albedo lives in the map, so material colour is reset to white; palette documented in make_textures.py.
+type TexDef = { f: string; m: number; n?: number; rough: number; metal?: number };
+const TEX: Record<string, TexDef> = {
+  plaster: { f: 'white', m: 4, rough: 0.9 }, white: { f: 'white', m: 4, rough: 0.88 }, wallw: { f: 'white', m: 4, rough: 0.9 },
+  charcoal: { f: 'charcoal', m: 2, n: 0.55, rough: 0.92 }, lightgrey: { f: 'lightgrey', m: 4, rough: 0.9 },
+  wood: { f: 'wood', m: 1.2, n: 0.6, rough: 0.55 }, rust: { f: 'wood', m: 1.2, n: 0.6, rough: 0.55 },
+  stone: { f: 'stone', m: 2.4, n: 0.8, rough: 0.42 }, bronze: { f: 'bronze', m: 1.5, n: 0.7, rough: 0.38, metal: 0.75 },
+  paver: { f: 'paver', m: 2.4, n: 0.7, rough: 0.85 }, footpath: { f: 'paver', m: 1.8, n: 0.7, rough: 0.85 },
+  lawn: { f: 'lawn', m: 4, rough: 1 }, asphalt: { f: 'asphalt', m: 6, rough: 0.92 },
+};
+// plain (untextured) finishes, tuned to the real site photos
+const FLAT: Record<string, { c: string; rough: number; metal?: number }> = {
+  frame: { c: '#3A3C40', rough: 0.45, metal: 0.4 },       // charcoal aluminium window frames
+  railwhite: { c: '#C9CCCE', rough: 0.32, metal: 0.65 },  // silver aluminium balcony bars
+  gold: { c: '#B08D5E', rough: 0.3, metal: 0.85 },        // bronze signage letters
+  steel: { c: '#4A4D52', rough: 0.4, metal: 0.6 },
+  blacksteel: { c: '#2A2C30', rough: 0.45, metal: 0.5 },
+  kerb: { c: '#C9C6BE', rough: 0.85 },
+  ceiling: { c: '#EEECE7', rough: 0.95 },
 };
 const texLoader = new THREE.TextureLoader();
 const texCache = new Map<string, THREE.Texture>();
-function tex(f: string, m: number, anis: number) {
+function tex(f: string, m: number, anis: number, color = true) {
   const k = f + m;
   if (!texCache.has(k)) {
-    const t = texLoader.load(`/tex/${f}.jpg`);
+    const t = texLoader.load(`/tex/${f}.jpg?v=${__BUILD__}`);
     t.wrapS = t.wrapT = THREE.RepeatWrapping;
-    t.colorSpace = THREE.SRGBColorSpace;
+    t.colorSpace = color ? THREE.SRGBColorSpace : THREE.NoColorSpace;
     t.repeat.set(1 / m, 1 / m);
     t.anisotropy = anis;
     texCache.set(k, t);
@@ -52,8 +66,6 @@ export class Campus {
   lampLights: THREE.PointLight[] = [];
   private glassMat?: THREE.MeshStandardMaterial;
   carMeshes: THREE.InstancedMesh[] = [];
-  photo?: PhotoFacades;
-  photoOn = true;
 
   constructor(private world: World) {
     this.root.add(this.overlay);
@@ -75,8 +87,6 @@ export class Campus {
     this.buildTowers(towers.scene);
     this.buildProps(props.scene);
     this.buildPickers();
-    this.photo = new PhotoFacades(Math.min(8, this.world.renderer.capabilities.getMaxAnisotropy()));
-    this.root.add(this.photo.group);
   }
 
   private tuneMaterial(m: THREE.MeshStandardMaterial) {
@@ -85,15 +95,24 @@ export class Campus {
     if (tx && !m.map) {
       const anis = Math.min(8, this.world.renderer.capabilities.getMaxAnisotropy());
       m.map = tex(tx.f, tx.m, anis);
-      if (tx.bump) { m.bumpMap = m.map; m.bumpScale = tx.bump; }
-      m.color.set(tx.f === 'white' ? 0xdcdad5 : tx.f === 'lightgrey' ? 0xe6e6e3 : 0xffffff);
+      if (tx.n) { m.normalMap = tex(tx.f + '_n', tx.m, anis, false); m.normalScale.set(tx.n, tx.n); }
+      m.color.set(0xffffff);
+      m.roughness = tx.rough; m.metalness = tx.metal ?? 0;
       m.needsUpdate = true;
     }
-    if (n === 'glass' || n === 'carglass') {
-      m.metalness = 0.85; m.roughness = 0.06; m.envMapIntensity = 1.6;
-      if (n === 'glass') this.glassMat = m;
+    const fl = FLAT[n];
+    if (fl) { m.color.set(fl.c); m.roughness = fl.rough; m.metalness = fl.metal ?? 0; }
+    if (n === 'glass') {
+      // dielectric glass: dark interior head-on, sky reflection rising at grazing angles (Fresnel)
+      m.color.set(0x1c242b); m.metalness = 0.25; m.roughness = 0.04; m.envMapIntensity = 2.4;
+      this.glassMat = m;
     }
-    if (n === 'railglass') { m.transparent = true; m.opacity = 0.3; m.depthWrite = false; m.metalness = 0.4; m.roughness = 0.05; }
+    if (n === 'carglass') { m.metalness = 0.6; m.roughness = 0.05; m.envMapIntensity = 1.6; }
+    if (n === 'railglass') {
+      m.color.set(0xc9d6d8); m.transparent = true; m.opacity = 0.26; m.depthWrite = false;
+      m.metalness = 0.15; m.roughness = 0.04; m.envMapIntensity = 2.0;
+    }
+    if (n === 'solar') { m.metalness = 0.55; m.roughness = 0.18; m.envMapIntensity = 1.6; }
     if (n === 'water') { m.metalness = 0.6; m.roughness = 0.03; m.color.set(0x2a6a80); }
     if (n === 'gold') { m.emissiveIntensity = 0; m.userData.nightEmissive = 1.4; }
     if (n === 'lobbyglow' || n === 'lamphead' || n === 'headlight' || n === 'taillight') {
@@ -122,7 +141,11 @@ export class Campus {
         .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>
           float lit = step(0.5, vWin);
           vec3 warm = mix(vec3(1.0, 0.72, 0.42), vec3(1.0, 0.86, 0.66), fract(vWin * 13.7));
-          totalEmissiveRadiance += warm * lit * uNight * (0.35 + 0.75 * fract(vWin * 5.3));`);
+          totalEmissiveRadiance += warm * lit * uNight * (0.35 + 0.75 * fract(vWin * 5.3));
+          // daytime: a hint of curtains / interiors behind some panes so the glass isn't a flat black void
+          float cur = step(0.45, fract(vWin * 3.7));
+          vec3 drape = mix(vec3(0.42, 0.38, 0.33), vec3(0.78, 0.74, 0.67), fract(vWin * 29.1));
+          totalEmissiveRadiance += drape * cur * (1.0 - uNight) * 0.045;`);
     };
     m.customProgramCacheKey = () => 'vp-glass';
   }
@@ -266,8 +289,6 @@ export class Campus {
 
   /** Slice: show floors 1..floor for the block containing `tower`; null = show all. */
   slice(tower: string | null, floor: number | null) {
-    const blk = tower ? SITE.blocks.find((b) => b.towers.includes(tower))?.id ?? null : null;
-    this.photo?.slice(floor ? blk : null, floor);
     for (const s of this.stacks) {
       const active = tower != null && s.block.towers.includes(tower) && floor != null;
       const n = active ? floor! : NF;
@@ -327,7 +348,6 @@ export class Campus {
       }
     });
     this.lampLights.forEach((l) => (l.intensity = 60 * n));
-    if (this.photo) { this.photo.group.visible = n < 0.55 && this.photoOn; this.photo.mat.emissiveIntensity = 0.32 * (1 - n); }
   }
 
   /** Balcony camera pose for a unit + view index */

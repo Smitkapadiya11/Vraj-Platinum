@@ -12,6 +12,8 @@ import { SITE } from '../data/project';
 
 export const LITE = new URLSearchParams(location.search).has('lite');
 if (LITE) gsap.ticker.lagSmoothing(0);
+const SHADOW_R = 100;
+const SHADOW_C = new THREE.Vector3(14, 0, 0); // campus centre (plot + road)
 export const IS_MOBILE = matchMedia('(pointer: coarse)').matches || Math.min(innerWidth, innerHeight) < 700;
 
 export class World {
@@ -24,7 +26,7 @@ export class World {
   ao?: GTAOPass;
   sky = new Sky();
   sun = new THREE.DirectionalLight(0xfff1dc, 3.2);
-  hemi = new THREE.HemisphereLight(0xcfe3ff, 0x6b5a46, 0.9);
+  hemi = new THREE.HemisphereLight(0xcfe3ff, 0x8a7a64, 0.5);
   night = 0; // 0 day .. 1 night
   hour = 16.5;
   private pmrem: THREE.PMREMGenerator;
@@ -41,8 +43,10 @@ export class World {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: !IS_MOBILE, powerPreference: 'high-performance', alpha: false });
     this.renderer.setPixelRatio(LITE ? 0.5 : Math.min(devicePixelRatio, IS_MOBILE ? 1.6 : 2));
     this.renderer.setSize(innerWidth, innerHeight, false);
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 0.95;
+    // Khronos PBR Neutral keeps material colours true (white plaster stays white, charcoal stays charcoal)
+    const tm = new URLSearchParams(location.search).get('tm');
+    this.renderer.toneMapping = tm === 'aces' ? THREE.ACESFilmicToneMapping : tm === 'agx' ? THREE.AgXToneMapping : THREE.NeutralToneMapping;
+    this.renderer.toneMappingExposure = 1;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.shadowMap.enabled = !LITE;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -69,12 +73,14 @@ export class World {
     this.pmrem = new THREE.PMREMGenerator(this.renderer);
 
     this.sun.castShadow = true;
-    const sm = IS_MOBILE ? 1024 : 2048;
+    // one shadow frustum fitted to the campus + front road (≈190 m), so towers always cast crisp shadows
+    const sm = IS_MOBILE ? 2048 : 4096;
     this.sun.shadow.mapSize.set(sm, sm);
     const sc = this.sun.shadow.camera as THREE.OrthographicCamera;
-    sc.left = -80; sc.right = 80; sc.top = 80; sc.bottom = -80; sc.near = 10; sc.far = 600;
-    this.sun.shadow.bias = -0.0004;
-    this.sun.shadow.normalBias = 0.04;
+    sc.left = -SHADOW_R; sc.right = SHADOW_R; sc.top = SHADOW_R; sc.bottom = -SHADOW_R; sc.near = 20; sc.far = 700;
+    this.sun.shadow.bias = -0.00025;
+    this.sun.shadow.normalBias = 0.035;
+    this.sun.shadow.radius = 3;
     this.scene.add(this.sun, this.sun.target, this.hemi);
     this.scene.fog = new THREE.Fog(0xdfe6ee, 600, 4200);
 
@@ -133,12 +139,13 @@ export class World {
     const day = 1 - this.night;
     const warm = THREE.MathUtils.clamp(1 - elev / 25, 0, 1);
     this.sunDir.copy(dir);
-    this.sun.intensity = 3.4 * THREE.MathUtils.clamp(elev / 8, 0, 1);
-    this.sun.color.setRGB(1, 0.93 - 0.22 * warm, 0.84 - 0.42 * warm);
-    this.hemi.intensity = 0.25 + 0.75 * day;
-    this.hemi.color.setRGB(0.8 - 0.55 * this.night, 0.88 - 0.6 * this.night, 1.0 - 0.55 * this.night);
-    this.hemi.groundColor.setRGB(0.42 * day + 0.05, 0.36 * day + 0.04, 0.3 * day + 0.06);
-    this.renderer.toneMappingExposure = 0.84 + 0.5 * this.night;
+    this.sun.intensity = 2.7 * THREE.MathUtils.clamp(elev / 8, 0, 1);
+    this.sun.color.setRGB(1, 0.94 - 0.2 * warm, 0.86 - 0.4 * warm);
+    this.hemi.intensity = 0.1 + 0.32 * day;
+    // neutral sky fill + warm ground bounce: shaded facades read as soft grey, not icy blue
+    this.hemi.color.setRGB(0.93 - 0.68 * this.night, 0.95 - 0.67 * this.night, 1.0 - 0.55 * this.night);
+    this.hemi.groundColor.setRGB(0.62 * day + 0.05, 0.53 * day + 0.04, 0.42 * day + 0.06);
+    this.renderer.toneMappingExposure = (this.renderer.toneMapping === THREE.NeutralToneMapping ? 0.88 : 0.84) + 0.5 * this.night;
     const fog = this.scene.fog as THREE.Fog;
     fog.color.setRGB(0.86 * day + 0.04, 0.89 * day + 0.06, 0.93 * day + 0.12);
     this.scene.background = null;
@@ -171,7 +178,7 @@ export class World {
         this.envRT = this.pmrem.fromScene(this.skyScene, 0.02);
       }
       this.scene.environment = this.envRT.texture;
-      this.scene.environmentIntensity = 0.55 * (1 - this.night) + 0.08;
+      this.scene.environmentIntensity = 0.13 * (1 - this.night) + 0.04; // sky PMREM is bright: keep sun:sky ≈ 4:1 for crisp form
     });
   }
 
@@ -209,9 +216,10 @@ export class World {
     if (this.overrideScene) {
       this.renderer.render(this.overrideScene.scene, this.overrideScene.camera);
     } else {
-      // keep the shadow frustum around what we look at
+      // shadow frustum: anchored on the campus, sliding only a little toward far-away targets
       const tg = this.controls.target;
-      this.sun.target.position.set(tg.x, 0, tg.z);
+      this.shadowC.set(tg.x, 0, tg.z).sub(SHADOW_C).clampLength(0, 40).add(SHADOW_C);
+      this.sun.target.position.copy(this.shadowC);
       this.sun.position.copy(this.sun.target.position).addScaledVector(this.sunDir, 300);
       this.composer.render(dt);
     }
@@ -228,4 +236,5 @@ export class World {
     }
   };
   sunDir = new THREE.Vector3(0, 1, 0);
+  private shadowC = new THREE.Vector3();
 }
