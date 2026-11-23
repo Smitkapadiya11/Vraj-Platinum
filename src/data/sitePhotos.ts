@@ -43,3 +43,31 @@ export function photosForView(tower: string, floor: number, dir: Dir, gardenFaci
   if (dir === 'E') return high ? pick('east-high') : [];
   return [];
 }
+
+// ---------------------------------------------------------------- real balcony views (stitched from the site clips)
+export interface RealSrc { src: string; thumb: string; kind: 'pano' | 'photo'; capFloor: number; capTower: string; set: PhotoSet; nearest?: boolean }
+const pano = (id: string, set: PhotoSet, capFloor: number, capTower: string): RealSrc => ({ src: `/site/pano/${id}.jpg`, thumb: `/site/pano/${id}_t.jpg`, kind: 'pano', capFloor, capTower, set });
+const photo = (id: string, set: PhotoSet, capFloor: number, capTower: string): RealSrc => ({ src: `/site/${id}.jpg`, thumb: `/site/${id}_t.jpg`, kind: 'photo', capFloor, capTower, set });
+
+const EAST_HIGH = [pano('162359770', 'east-high', 14, 'A/B'), pano('164327625', 'east-high', 14, 'A/B'), pano('162414116', 'east-high', 14, 'A/B'),
+  pano('162422290', 'east-high', 14, 'A/B'), photo('162353359', 'east-high', 14, 'A/B'), photo('164350281', 'east-high', 14, 'A/B')];
+const CAMPUS_HIGH = [pano('162026208', 'campus-high', 14, 'A/B'), photo('162212319', 'campus-high', 14, 'A/B'), photo('162215852', 'campus-high', 14, 'A/B'),
+  photo('162021732', 'campus-high', 14, 'A/B'), photo('162132917', 'campus-high', 14, 'A/B')];
+const E_HIGH = [photo('163453891', 'e-high', 14, 'E')];
+const GARDEN_LOW = [pano('163117795', 'garden-low', 1, 'E'), photo('163134291', 'garden-low', 1, 'E'), photo('163129595', 'garden-low', 1, 'E'), photo('163139928', 'garden-low', 1, 'E')];
+const GARDEN_GROUND = ['163815763', '163845322', '163842093', '163819932'].map((i) => photo(i, 'garden-ground', 0, 'garden'));
+const ENTRANCE = ['164625562', '164552954', '164556602'].map((i) => photo(i, 'entrance', 0, 'A/B'));
+const NW_HIGH = [photo('162142362', 'northwest-high', 14, 'A/B')];
+const near = (l: RealSrc[]) => l.map((r) => ({ ...r, nearest: true }));
+
+/** Real captured views for a flat's balcony; `nearest` marks views from a different side/tower shown for reference. */
+export function realViewsFor(tower: string, floor: number, dir: Dir, gardenFacing: boolean): RealSrc[] {
+  const front = tower === 'A' || tower === 'B';
+  const high = floor >= 5;
+  if (front && dir === 'E') return high ? EAST_HIGH : [...EAST_HIGH, ...ENTRANCE];
+  if (front && dir === 'W') return high ? CAMPUS_HIGH : [...GARDEN_GROUND, ...CAMPUS_HIGH];
+  if (front) return near(high ? EAST_HIGH : ENTRANCE);
+  if (gardenFacing) return high ? [...E_HIGH, ...GARDEN_LOW, ...near(CAMPUS_HIGH)] : [...GARDEN_LOW, ...GARDEN_GROUND];
+  if (dir === 'W' || dir === 'N') return near(high ? NW_HIGH : GARDEN_GROUND);
+  return near(high ? CAMPUS_HIGH : GARDEN_GROUND);
+}

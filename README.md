@@ -11,7 +11,12 @@ GSAP for camera choreography, **Vite** build, deployed as a static site on **Ver
 | Feature | Notes |
 |---|---|
 | Real-location campus | Plot placed at the Google-Maps pin (21.2318 N, 72.9137 E, origin 43 m west of the gate), streamed Esri satellite ground, 177 real neighbouring buildings from OpenStreetMap with real storey counts |
-| 6 towers from the brochure layout | A/B (Type A), C–F (Type B ends, Type C middle), G+14, rooftop solar, creeper planters, signage, gate, 30 m road |
+| 6 towers matched to the real buildings | Re-modelled from the 23 Nov 2026 site photos: charcoal sand-finish piers, white textured walls, bronze strips, cantilevered balconies (MS-bar / glass railings), stilt ground floor, rooftop steel solar canopy, stone & bronze entrance signage, wooden slat gates, guard cabin, black steel garden portal |
+| Photo-derived textures | `scripts/make_textures.py` builds tileable textures from the site photos; Blender exports world-metre UVs so they sit at real scale |
+| Real balcony view (touch & look around) | Panoramas stitched (OpenCV) from the developer's 23 Nov 2026 clips — 14th-floor east (road / Unity Party Plot), 14th-floor west (campus), 1st-floor garden — wrapped at true angular width; drag, pinch or move the phone. Every flat gets its matching capture (or the nearest one, labelled) with a note on capture floor vs. the flat's floor, plus a toggle to the 3D view at the exact floor |
+| Real site photos | 30 photos + 4 clips in a "Site today" gallery; the balcony view shows the matching real photos for that side & height |
+| Drone tour | Captioned cinematic flight: aerial, entrance, front towers, garden fly-through, rooftop solar, neighbourhood |
+| Sunlight hours | Direct sun on each balcony today / 21 June / 21 Dec, ray-traced against the towers and neighbouring buildings |
 | Tower → floor → unit | Floor slicing with a ghost volume above, colour-coded availability plates, labels, hover & tap picking |
 | Balcony view for every flat | First-person camera on the actual balcony at the real height and facing, drag to look, pinch/scroll zoom, floor ▲▼ hopping, compass heading |
 | Furnished 3D interiors | Type A/B/C modelled from the brochure plans, furnished in the palette of the real sample flat, light baked in Cycles |
@@ -21,7 +26,7 @@ GSAP for camera choreography, **Vite** build, deployed as a static site on **Ver
 | Find your home | Filter by tower, type, view, floor band, availability |
 | Sample flat | Actual walkthrough video + stills |
 | Gallery, location, specs | Brochure renders, landmarks, Gujarati specifications translated |
-| EN / ગુજરાતી / हिन्दी | UI language switch |
+| EN / ગુજરાતી / हिन्दी | UI and all project content (specs, amenities, highlights, nearby, rooms, views, tour) |
 | Mobile + desktop | Bottom sheets & compact controls on phones, adaptive resolution |
 
 ## Before going live (developer data)

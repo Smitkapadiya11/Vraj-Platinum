@@ -285,3 +285,6 @@ select.lang option { color: #111; }
   .realph small { display: none; }
   .tourcap { bottom: auto; top: 76px; font-size: 20px; }
 }
+.capnote { margin-top: 4px; color: #f1d7b6 !important; max-width: 60ch; line-height: 1.4; }
+.rp-row button.on { outline: 2px solid var(--copper); }
+.rp-row button { font-size: 11px; font-weight: 800; letter-spacing: .05em; }

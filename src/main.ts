@@ -7,11 +7,12 @@ import { Ground } from './scene/Ground';
 import { Context } from './scene/Context';
 import { Interior } from './scene/Interior';
 import { BalconyView } from './scene/BalconyView';
+import { RealView } from './scene/RealView';
 import { SITE, PROJECT, PLANS, GALLERY, SAMPLE_FLAT, PLAN_IMG } from './data/project';
 import { UNITS, UNIT_BY_ID, TOWERS, DIR_NAME, unitsOf, type Unit } from './data/units';
 import { t, setLang, getLang, onLang, type Lang } from './ui/i18n';
 import { L, DIR3, TAG3, VIEW3, room, ABOUT, HIGHLIGHTS3, AMENITIES3, SPECS_EXT3, SPECS_INT3, NEARBY3, TOUR3 } from './data/i18nContent';
-import { SITE_PHOTOS, SET_INFO, photoSrc, photosForView, type SitePhoto } from './data/sitePhotos';
+import { SITE_PHOTOS, SET_INFO, photoSrc, photosForView, realViewsFor, type SitePhoto } from './data/sitePhotos';
 import { icon } from './ui/icons';
 
 // ------------------------------------------------------------------ setup
@@ -25,9 +26,10 @@ const context = new Context();
 world.scene.add(context.group);
 const interior = new Interior(world, $('#roomLabels'));
 const balcony = new BalconyView(world);
+const realView = new RealView(world);
 
 type Mode = 'campus' | 'tower' | 'unit' | 'balcony' | 'interior';
-const S = { mode: 'campus' as Mode, tower: null as string | null, floor: null as number | null, unit: null as string | null, view: 0, hover: null as string | null };
+const S = { real: true, realIdx: 0, mode: 'campus' as Mode, tower: null as string | null, floor: null as number | null, unit: null as string | null, view: 0, hover: null as string | null };
 const shortlist = new Set<string>(JSON.parse(safeGet('vp-short') || '[]'));
 function safeGet(k: string) { try { return localStorage.getItem(k); } catch { return null; } }
 function safeSet(k: string, v: string) { try { localStorage.setItem(k, v); } catch { /* ignore */ } }
@@ -307,6 +309,7 @@ function towerCam(tw: string, floor?: number | null) {
   return { pos, target };
 }
 function goCampus() {
+  realView.close();
   context.clear.value = 40;
   if (S.mode === 'balcony') balcony.exit();
   if (S.mode === 'interior') interior.close();
@@ -319,6 +322,7 @@ function goCampus() {
 }
 function selectTower(tw: string, floor: number | null = null) {
   stopTour();
+  realView.close();
   context.clear.value = 40;
   if (S.mode === 'balcony') balcony.exit();
   if (S.mode === 'interior') interior.close();
@@ -343,6 +347,7 @@ function selectFloor(f: number) {
 }
 function selectUnit(id: string) {
   stopTour();
+  realView.close();
   const u = UNIT_BY_ID.get(id);
   if (!u) return;
   if (S.tower !== u.tower || S.floor !== u.floor) {
@@ -377,11 +382,28 @@ async function openBalcony(id: string, view: number) {
   const pose = campus.balconyPose(u, view);
   renderHud();
   context.clear.value = 0;
+  realView.close();
+  const srcs = realViewsFor(u.tower, u.floor, pose.dir as 'N' | 'S' | 'E' | 'W', u.tag.startsWith('Garden'));
+  if (S.realIdx >= srcs.length) S.realIdx = 0;
   await balcony.enter(pose.pos, pose.look);
+  if (S.mode !== 'balcony' || S.unit !== id) return;
+  if (S.real && srcs.length && !srcs[0].nearest) await showReal();
+  else { renderHud(); hint(t('lookAround')); }
+}
+async function showReal() {
+  if (S.mode !== 'balcony' || !S.unit) return;
+  const u = UNIT_BY_ID.get(S.unit)!;
+  const pose = campus.balconyPose(u, S.view);
+  const srcs = realViewsFor(u.tower, u.floor, pose.dir as 'N' | 'S' | 'E' | 'W', u.tag.startsWith('Garden'));
+  if (!srcs.length) { renderHud(); return; }
+  const cur = srcs[Math.min(S.realIdx, srcs.length - 1)];
+  await realView.open(cur.src, cur.kind);
+  renderHud();
   hint(t('lookAround'));
 }
 async function openInterior(type: 'A' | 'B' | 'C') {
   stopTour();
+  realView.close();
   if (S.mode === 'balcony') balcony.exit();
   const prev = S.mode;
   S.mode = 'interior';
@@ -393,6 +415,7 @@ async function openInterior(type: 'A' | 'B' | 'C') {
   void prev;
 }
 function closeOverlayMode() {
+  realView.close();
   context.clear.value = 40;
   if (S.mode === 'balcony') balcony.exit();
   if (S.mode === 'interior') interior.close();
@@ -409,27 +432,45 @@ function renderHud(type?: string) {
   if (S.mode === 'balcony' && S.unit) {
     const u = UNIT_BY_ID.get(S.unit)!;
     const pose = campus.balconyPose(u, S.view);
+    const srcs = realViewsFor(u.tower, u.floor, pose.dir as 'N' | 'S' | 'E' | 'W', u.tag.startsWith('Garden'));
+    const cur = srcs[Math.min(S.realIdx, srcs.length - 1)];
+    const showingReal = realView.active && !!cur;
     h.classList.remove('hidden');
     chips.classList.remove('hidden');
-    h.innerHTML = `<div><div class="eyebrow">${t('realView')}</div><h3>${u.id} · ${L(VIEW3[pose.label] || pose.label)}</h3>
-      <small>${t('floor')} ${u.floor} · ${u.heightM.toFixed(1)} m · ${t('facing')} <span class="heading" id="hdg">${L(DIR3[pose.dir])}</span></small></div>
+    const diff = cur ? u.floor - cur.capFloor : 0;
+    const note = !cur ? '' : cur.nearest ? t('nearestNote')
+      : cur.capFloor === 0 ? t('groundNote')
+      : Math.abs(diff) >= 3 ? `${t('capturedOn')} ${cur.capFloor} · ${Math.abs(diff * SITE.floorH).toFixed(0)} m ${diff < 0 ? t('lowerHere') : t('higherHere')}` : t('sameHeight');
+    h.innerHTML = `<div><div class="eyebrow">${showingReal ? '📷 ' + t('realPhotoView') : t('realView')}</div><h3>${u.id} · ${L(VIEW3[pose.label] || pose.label)}</h3>
+      <small>${t('floor')} ${u.floor} · ${u.heightM.toFixed(1)} m · ${t('facing')} <span class="heading" id="hdg">${L(DIR3[pose.dir])}</span></small>
+      ${showingReal ? `<small class="capnote">${t('captured')}: ${cur.capTower === 'garden' ? t('gardenLevel') : `${t('tower')} ${cur.capTower}, ${t('floor')} ${cur.capFloor || 'G'}`} · 23 Nov 2026${note ? ' — ' + note : ''}</small>` : ''}</div>
       <button class="btn sm" id="hudX">${t('exitView')}</button>`;
-    chips.innerHTML = u.flat.views.map((v, i) => `<button class="chip ${i === S.view ? 'on' : ''}" data-v="${i}">${L(VIEW3[v.label] || v.label)} · ${L(DIR3[v.dir])}</button>`).join('') +
-      `<button class="chip" data-f="-1">▼ ${t('floor')}</button><button class="chip" data-f="1">▲ ${t('floor')}</button><button class="chip" id="hud3d">${t('interior3d')}</button>`;
+    chips.innerHTML = (srcs.length ? `<button class="chip ${showingReal ? 'on' : ''}" id="toReal">📷 ${t('realPhotoView')}</button><button class="chip ${showingReal ? '' : 'on'}" id="to3d">3D · ${t('floor')} ${u.floor}</button>` : '') +
+      u.flat.views.map((v, i) => `<button class="chip ${i === S.view ? 'on' : ''}" data-v="${i}">${L(VIEW3[v.label] || v.label)} · ${L(DIR3[v.dir])}</button>`).join('') +
+      `<button class="chip" data-f="-1">▼ ${t('floor')}</button><button class="chip" data-f="1">▲ ${t('floor')}</button>` +
+      (IS_MOBILE && showingReal ? `<button class="chip" id="gyro">📱 ${t('movePhone')}</button>` : '') +
+      `<button class="chip" id="hud3d">${t('interior3d')}</button>`;
     chips.querySelectorAll<HTMLElement>('[data-v]').forEach((b) => (b.onclick = () => openBalcony(u.id, +b.dataset.v!)));
     chips.querySelectorAll<HTMLElement>('[data-f]').forEach((b) => (b.onclick = () => {
       const nf = THREE.MathUtils.clamp(u.floor + +b.dataset.f!, 1, NF);
       const nu = UNITS.find((x) => x.tower === u.tower && x.no === u.no && x.floor === nf)!;
       openBalcony(nu.id, Math.min(S.view, nu.flat.views.length - 1));
     }));
+    const tr = document.getElementById('toReal'), t3 = document.getElementById('to3d'), gy = document.getElementById('gyro');
+    if (tr) tr.onclick = () => { S.real = true; showReal(); };
+    if (t3) t3.onclick = () => { S.real = false; realView.close(); renderHud(); };
+    if (gy) gy.onclick = async () => { const ok = await realView.enableGyro(); toast(ok ? t('movePhone') : t('gyroNo')); };
     $('#hud3d').onclick = () => openInterior(u.type);
     $('#hudX').onclick = () => closeOverlayMode();
     const rp = $('#realPh');
-    const ph = photosForView(u.tower, u.floor, pose.dir as 'N' | 'S' | 'E' | 'W', u.tag.startsWith('Garden'));
-    if (ph.length) {
+    if (srcs.length) {
       rp.classList.remove('hidden');
-      rp.innerHTML = `<b>📷 ${t('realPhotos')}</b><small>${L(SET_INFO[ph[0].set])}</small><div class="rp-row">${ph.slice(0, 6).map((p, i) => `<button data-i="${i}" style="background-image:url(${photoSrc(p, true)})">${p.video ? '▶' : ''}</button>`).join('')}</div>`;
-      rp.querySelectorAll<HTMLElement>('[data-i]').forEach((b) => (b.onclick = () => { const p = ph[+b.dataset.i!]; lightbox(photoSrc(p), photoCaption(p)); }));
+      rp.innerHTML = `<b>📷 ${t('realPhotos')}</b><small>${L(SET_INFO[srcs[0].set])}${srcs[0].nearest ? ' · ' + t('nearestShort') : ''}</small><div class="rp-row">${srcs.slice(0, 6).map((p, i) => `<button data-i="${i}" class="${showingReal && i === S.realIdx ? 'on' : ''}" style="background-image:url(${p.thumb})">${p.kind === 'pano' ? 'PANO' : ''}</button>`).join('')}</div>
+        <button class="btn sm" id="rpVid" style="margin-top:8px;width:100%">▶ ${t('playClip')}</button>`;
+      rp.querySelectorAll<HTMLElement>('[data-i]').forEach((bt) => (bt.onclick = () => { S.real = true; S.realIdx = +bt.dataset.i!; showReal(); }));
+      const clip = photosForView(u.tower, u.floor, pose.dir as 'N' | 'S' | 'E' | 'W', u.tag.startsWith('Garden')).find((p) => p.video) || SITE_PHOTOS.find((p) => p.video && p.set === srcs[0].set);
+      const vb = document.getElementById('rpVid')!;
+      if (clip) vb.onclick = () => lightbox(photoSrc(clip), photoCaption(clip)); else vb.remove();
     } else rp.classList.add('hidden');
     balcony.onHeading = (deg) => {
       const el = document.getElementById('hdg');
