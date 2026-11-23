@@ -310,6 +310,7 @@ function towerCam(tw: string, floor?: number | null) {
 }
 function goCampus() {
   realView.close();
+  campus.photoOn = true; campus.setNight(world.night);
   context.clear.value = 40;
   if (S.mode === 'balcony') balcony.exit();
   if (S.mode === 'interior') interior.close();
@@ -323,6 +324,7 @@ function goCampus() {
 function selectTower(tw: string, floor: number | null = null) {
   stopTour();
   realView.close();
+  campus.photoOn = true; campus.setNight(world.night);
   context.clear.value = 40;
   if (S.mode === 'balcony') balcony.exit();
   if (S.mode === 'interior') interior.close();
@@ -348,6 +350,7 @@ function selectFloor(f: number) {
 function selectUnit(id: string) {
   stopTour();
   realView.close();
+  campus.photoOn = true; campus.setNight(world.night);
   const u = UNIT_BY_ID.get(id);
   if (!u) return;
   if (S.tower !== u.tower || S.floor !== u.floor) {
@@ -382,6 +385,7 @@ async function openBalcony(id: string, view: number) {
   const pose = campus.balconyPose(u, view);
   renderHud();
   context.clear.value = 0;
+  campus.photoOn = false; campus.setNight(world.night);
   realView.close();
   const srcs = realViewsFor(u.tower, u.floor, pose.dir as 'N' | 'S' | 'E' | 'W', u.tag.startsWith('Garden'));
   if (S.realIdx >= srcs.length) S.realIdx = 0;
@@ -416,6 +420,7 @@ async function openInterior(type: 'A' | 'B' | 'C') {
 }
 function closeOverlayMode() {
   realView.close();
+  campus.photoOn = true; campus.setNight(world.night);
   context.clear.value = 40;
   if (S.mode === 'balcony') balcony.exit();
   if (S.mode === 'interior') interior.close();
@@ -462,16 +467,15 @@ function renderHud(type?: string) {
     if (gy) gy.onclick = async () => { const ok = await realView.enableGyro(); toast(ok ? t('movePhone') : t('gyroNo')); };
     $('#hud3d').onclick = () => openInterior(u.type);
     $('#hudX').onclick = () => closeOverlayMode();
-    const rp = $('#realPh');
-    if (srcs.length) {
-      rp.classList.remove('hidden');
-      rp.innerHTML = `<b>📷 ${t('realPhotos')}</b><small>${L(SET_INFO[srcs[0].set])}${srcs[0].nearest ? ' · ' + t('nearestShort') : ''}</small><div class="rp-row">${srcs.slice(0, 6).map((p, i) => `<button data-i="${i}" class="${showingReal && i === S.realIdx ? 'on' : ''}" style="background-image:url(${p.thumb})">${p.kind === 'pano' ? 'PANO' : ''}</button>`).join('')}</div>
-        <button class="btn sm" id="rpVid" style="margin-top:8px;width:100%">▶ ${t('playClip')}</button>`;
-      rp.querySelectorAll<HTMLElement>('[data-i]').forEach((bt) => (bt.onclick = () => { S.real = true; S.realIdx = +bt.dataset.i!; showReal(); }));
-      const clip = photosForView(u.tower, u.floor, pose.dir as 'N' | 'S' | 'E' | 'W', u.tag.startsWith('Garden')).find((p) => p.video) || SITE_PHOTOS.find((p) => p.video && p.set === srcs[0].set);
-      const vb = document.getElementById('rpVid')!;
-      if (clip) vb.onclick = () => lightbox(photoSrc(clip), photoCaption(clip)); else vb.remove();
-    } else rp.classList.add('hidden');
+    $('#realPh').classList.add('hidden');
+    const clip = photosForView(u.tower, u.floor, pose.dir as 'N' | 'S' | 'E' | 'W', u.tag.startsWith('Garden')).find((p) => p.video) || (srcs[0] && SITE_PHOTOS.find((p) => p.video && p.set === srcs[0].set));
+    if (clip) {
+      const vb = document.createElement('button');
+      vb.className = 'chip';
+      vb.textContent = '▶ ' + t('playClip');
+      vb.onclick = () => lightbox(photoSrc(clip), photoCaption(clip));
+      chips.insertBefore(vb, chips.children[2] || null);
+    }
     balcony.onHeading = (deg) => {
       const el = document.getElementById('hdg');
       const names = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];

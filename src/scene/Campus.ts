@@ -5,6 +5,7 @@ import { SITE, PROPS, type BlockDef, type FlatDef } from '../data/project';
 import { UNITS, type Unit, DIR_VEC } from '../data/units';
 import BALCONIES from '../data/balconies.json';
 import { sunPosition, istDate } from './sun';
+import { PhotoFacades } from './PhotoFacades';
 
 // photo-derived tileable textures (public/tex, built by scripts/make_textures.py); size = metres per tile
 const TEX: Record<string, { f: string; m: number; bump?: number }> = {
@@ -50,6 +51,8 @@ export class Campus {
   lampLights: THREE.PointLight[] = [];
   private glassMat?: THREE.MeshStandardMaterial;
   carMeshes: THREE.InstancedMesh[] = [];
+  photo?: PhotoFacades;
+  photoOn = true;
 
   constructor(private world: World) {
     this.root.add(this.overlay);
@@ -71,6 +74,8 @@ export class Campus {
     this.buildTowers(towers.scene);
     this.buildProps(props.scene);
     this.buildPickers();
+    this.photo = new PhotoFacades(Math.min(8, this.world.renderer.capabilities.getMaxAnisotropy()));
+    this.root.add(this.photo.group);
   }
 
   private tuneMaterial(m: THREE.MeshStandardMaterial) {
@@ -248,6 +253,8 @@ export class Campus {
 
   /** Slice: show floors 1..floor for the block containing `tower`; null = show all. */
   slice(tower: string | null, floor: number | null) {
+    const blk = tower ? SITE.blocks.find((b) => b.towers.includes(tower))?.id ?? null : null;
+    this.photo?.slice(floor ? blk : null, floor);
     for (const s of this.stacks) {
       const active = tower != null && s.block.towers.includes(tower) && floor != null;
       const n = active ? floor! : NF;
@@ -307,6 +314,7 @@ export class Campus {
       }
     });
     this.lampLights.forEach((l) => (l.intensity = 60 * n));
+    if (this.photo) { this.photo.group.visible = n < 0.55 && this.photoOn; this.photo.mat.emissiveIntensity = 0.32 * (1 - n); }
   }
 
   /** Balcony camera pose for a unit + view index */

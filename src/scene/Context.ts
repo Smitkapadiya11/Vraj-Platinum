@@ -67,8 +67,8 @@ export class Context {
         const base = wp.length / 3;
         // three: x = E, z = -N
         wp.push(a.x, 0, -a.y, b.x, 0, -b.y, b.x, h, -b.y, a.x, h, -a.y);
-        wu.push(u / 3, 0, (u + len) / 3, 0, (u + len) / 3, h / 3, u / 3, h / 3);
-        for (let k = 0; k < 4; k++) wc.push(col.r, col.g, col.b);
+        wu.push(u / 22, 0, (u + len) / 22, 0, (u + len) / 22, h / 18, u / 22, h / 18);
+        for (let k = 0; k < 4; k++) wc.push(0.5 + col.r * 0.5, 0.5 + col.g * 0.5, 0.5 + col.b * 0.5);
         wi.push(base, base + 1, base + 2, base, base + 2, base + 3);
         u += len;
       }
@@ -82,9 +82,15 @@ export class Context {
     wg.setAttribute('color', new THREE.Float32BufferAttribute(wc, 3));
     wg.setIndex(wi);
     wg.computeVertexNormals();
+    const photo = new THREE.TextureLoader().load('/tex/facade_neighbour.jpg');
+    photo.wrapS = photo.wrapT = THREE.RepeatWrapping;
+    photo.colorSpace = THREE.SRGBColorSpace;
+    photo.anisotropy = 4;
+    const lit = windowTexture(true);
+    lit.repeat.set(22 / 3, 18 / 3);
     this.wallMat = new THREE.MeshStandardMaterial({
-      vertexColors: true, map: windowTexture(false), emissiveMap: windowTexture(true), emissive: 0xffffff,
-      emissiveIntensity: 0, roughness: 0.85, side: THREE.DoubleSide,
+      vertexColors: true, map: photo, emissiveMap: lit, emissive: 0xffffff,
+      emissiveIntensity: 0, roughness: 0.9, side: THREE.DoubleSide,
     });
     this.fadeShader(this.wallMat);
     const walls = new THREE.Mesh(wg, this.wallMat);
