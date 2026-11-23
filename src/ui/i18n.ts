@@ -1,0 +1,98 @@
+export type Lang = 'en' | 'gu' | 'hi';
+const D = {
+  explore: ['Explore 3D', '3D જુઓ', '3D देखें'],
+  residences: ['Residences', 'ફ્લેટ્સ', 'फ्लैट्स'],
+  gallery: ['Gallery', 'ગેલેરી', 'गैलरी'],
+  sampleFlat: ['Sample flat', 'સેમ્પલ ફ્લેટ', 'सैंपल फ्लैट'],
+  location: ['Location', 'લોકેશન', 'लोकेशन'],
+  specs: ['Specifications', 'સ્પેસિફિકેશન', 'स्पेसिफिकेशन'],
+  enquire: ['Enquire', 'પૂછપરછ', 'पूछताछ'],
+  tapTower: ['Tap a tower to begin', 'શરૂ કરવા ટાવર પર ટેપ કરો', 'शुरू करने के लिए टावर पर टैप करें'],
+  dragHint: ['Drag to orbit · Pinch or scroll to zoom', 'ફેરવવા ખેંચો · ઝૂમ માટે પિંચ/સ્ક્રોલ', 'घुमाने के लिए ड्रैग · ज़ूम के लिए पिंच/स्क्रॉल'],
+  tower: ['Tower', 'ટાવર', 'टावर'],
+  floor: ['Floor', 'માળ', 'मंज़िल'],
+  available: ['Available', 'ઉપલબ્ધ', 'उपलब्ध'],
+  hold: ['On hold', 'હોલ્ડ', 'होल्ड'],
+  sold: ['Sold', 'વેચાયેલ', 'बिक चुका'],
+  balconyView: ['Balcony view', 'બાલ્કની વ્યૂ', 'बालकनी व्यू'],
+  interior3d: ['3D interior', '3D ઇન્ટિરિયર', '3D इंटीरियर'],
+  floorPlan: ['Floor plan', 'ફ્લોર પ્લાન', 'फ्लोर प्लान'],
+  costSheet: ['Cost & EMI', 'કિંમત અને EMI', 'कीमत और EMI'],
+  shortlist: ['Shortlist', 'શોર્ટલિસ્ટ', 'शॉर्टलिस्ट'],
+  shortlisted: ['Shortlisted', 'શોર્ટલિસ્ટ કર્યું', 'शॉर्टलिस्ट किया'],
+  whatsapp: ['Enquire on WhatsApp', 'WhatsApp પર પૂછો', 'WhatsApp पर पूछें'],
+  call: ['Call sales', 'કૉલ કરો', 'कॉल करें'],
+  back: ['Back', 'પાછા', 'वापस'],
+  close: ['Close', 'બંધ', 'बंद'],
+  facing: ['Facing', 'દિશા', 'दिशा'],
+  height: ['Height', 'ઊંચાઈ', 'ऊंचाई'],
+  roomArea: ['Room area', 'રૂમ એરિયા', 'रूम एरिया'],
+  type: ['Type', 'ટાઈપ', 'टाइप'],
+  bhk: ['2 BHK', '2 BHK', '2 BHK'],
+  timeOfDay: ['Sun & time', 'સૂર્ય અને સમય', 'सूरज और समय'],
+  day: ['Day', 'દિવસ', 'दिन'],
+  night: ['Night', 'રાત', 'रात'],
+  filters: ['Find your home', 'તમારું ઘર શોધો', 'अपना घर खोजें'],
+  allTowers: ['All towers', 'બધા ટાવર', 'सभी टावर'],
+  anyType: ['Any type', 'કોઈપણ ટાઈપ', 'कोई भी टाइप'],
+  anyFacing: ['Any view', 'કોઈપણ વ્યૂ', 'कोई भी व्यू'],
+  onlyAvailable: ['Only available', 'ફક્ત ઉપલબ્ધ', 'केवल उपलब्ध'],
+  floorsRange: ['Floors', 'માળ', 'मंज़िलें'],
+  results: ['homes', 'ઘર', 'घर'],
+  view: ['View', 'જુઓ', 'देखें'],
+  realView: ['Real-location view simulation', 'વાસ્તવિક લોકેશન વ્યૂ સિમ્યુલેશન', 'वास्तविक लोकेशन व्यू सिमुलेशन'],
+  lookAround: ['Drag to look around', 'આસપાસ જોવા ખેંચો', 'चारों ओर देखने के लिए ड्रैग करें'],
+  exitView: ['Exit view', 'વ્યૂ બંધ', 'व्यू बंद'],
+  rooms: ['Rooms', 'રૂમ્સ', 'कमरे'],
+  agreement: ['Agreement value', 'એગ્રીમેન્ટ વેલ્યુ', 'एग्रीमेंट वैल्यू'],
+  gst: ['GST', 'GST', 'GST'],
+  stamp: ['Stamp duty (4.9%)', 'સ્ટેમ્પ ડ્યુટી (4.9%)', 'स्टाम्प ड्यूटी (4.9%)'],
+  registration: ['Registration (1%)', 'રજીસ્ટ્રેશન (1%)', 'रजिस्ट्रेशन (1%)'],
+  total: ['Estimated total', 'અંદાજિત કુલ', 'अनुमानित कुल'],
+  emi: ['Monthly EMI', 'માસિક EMI', 'मासिक EMI'],
+  loan: ['Loan', 'લોન', 'लोन'],
+  rate: ['Interest', 'વ્યાજ', 'ब्याज'],
+  tenure: ['Tenure', 'મુદત', 'अवधि'],
+  years: ['yrs', 'વર્ષ', 'वर्ष'],
+  womanBuyer: ['Sole woman buyer', 'એકમાત્ર મહિલા ખરીદનાર', 'एकमात्र महिला खरीदार'],
+  ready: ['Ready possession', 'રેડી પઝેશન', 'रेडी पज़ेशन'],
+  highlights: ['Project highlights', 'પ્રોજેક્ટ હાઇલાઇટ્સ', 'प्रोजेक्ट हाइलाइट्स'],
+  amenities: ['Amenities', 'સુવિધાઓ', 'सुविधाएं'],
+  external: ['External', 'બાહ્ય', 'बाहरी'],
+  internal: ['Internal', 'આંતરિક', 'आंतरिक'],
+  directions: ['Get directions', 'દિશાઓ મેળવો', 'दिशा-निर्देश'],
+  brochure: ['Brochure', 'બ્રોશર', 'ब्रोशर'],
+  loading: ['Raising six towers in 3D…', '6 ટાવર 3Dમાં ઊભા થઈ રહ્યા છે…', '6 टावर 3D में बन रहे हैं…'],
+  enter: ['Enter Vraj Platinum', 'વ્રજ પ્લેટિનમમાં પ્રવેશો', 'व्रज प्लैटिनम में प्रवेश करें'],
+  compare: ['Compare', 'સરખામણી', 'तुलना'],
+  name: ['Your name', 'તમારું નામ', 'आपका नाम'],
+  phone: ['Mobile number', 'મોબાઇલ નંબર', 'मोबाइल नंबर'],
+  send: ['Send on WhatsApp', 'WhatsApp પર મોકલો', 'WhatsApp पर भेजें'],
+  nearby: ['Around the neighbourhood', 'આસપાસ', 'आस-पास'],
+  campus: ['Campus', 'કેમ્પસ', 'कैंपस'],
+  units: ['Units on this floor', 'આ માળ પરના ફ્લેટ', 'इस मंज़िल के फ्लैट'],
+  quality: ['Quality', 'ક્વોલિટી', 'क्वालिटी'],
+  share: ['Share', 'શેર', 'शेयर'],
+  copied: ['Link copied', 'લિંક કૉપી થઈ', 'लिंक कॉपी हुआ'],
+  measure: ['Room sizes', 'રૂમ સાઇઝ', 'कमरों के साप'],
+  actualPhotos: ['Actual sample-flat walkthrough', 'વાસ્તવિક સેમ્પલ ફ્લેટ', 'वास्तविक सैंपल फ्लैट'],
+};
+// fix a typo-safe Hindi label
+D.measure[2] = 'कमरों के माप';
+
+function readLang(): Lang {
+  try { const v = localStorage.getItem('vp-lang'); if (v === 'en' || v === 'gu' || v === 'hi') return v; } catch { /* private mode */ }
+  return 'en';
+}
+let lang: Lang = readLang();
+const listeners: (() => void)[] = [];
+export function t(k: keyof typeof D) { return D[k][lang === 'en' ? 0 : lang === 'gu' ? 1 : 2]; }
+export function getLang() { return lang; }
+export function setLang(l: Lang) {
+  lang = l;
+  try { localStorage.setItem('vp-lang', l); } catch { /* private mode */ }
+  document.documentElement.lang = l;
+  listeners.forEach((f) => f());
+}
+export function onLang(f: () => void) { listeners.push(f); }
+export type Key = keyof typeof D;

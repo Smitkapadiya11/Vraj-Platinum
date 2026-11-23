@@ -1,0 +1,672 @@
+{
+ "name": "Vraj Platinum",
+ "geo": {
+  "lat": 21.2318382,
+  "lng": 72.9136999,
+  "rotationDeg": 0,
+  "note": "Google Maps pin sits at the gate on the 100 ft road; the plot centre (model origin) is ~43 m west of it (verified on Esri imagery).",
+  "originLat": 21.2318382,
+  "originLng": 72.913286
+ },
+ "groundH": 3.6,
+ "floorH": 3.0,
+ "floors": 14,
+ "plot": [
+  -42.966,
+  43.029,
+  -37.485,
+  37.485
+ ],
+ "road": {
+  "rect": [
+   43.029,
+   73.029,
+   -59.535,
+   63.315
+  ],
+  "width": 30.0,
+  "name": "30.00 m wide road (Sarthana-Gadhpur 100 ft road)"
+ },
+ "garden": [
+  -35.721,
+  9.324,
+  -5.796,
+  5.985
+ ],
+ "playArea": [
+  -35.406,
+  -29.736,
+  -5.481,
+  5.67
+ ],
+ "waterBody": [
+  8.883,
+  9.639,
+  -4.095,
+  4.221
+ ],
+ "centralPlanter": [
+  19.089,
+  34.839,
+  -0.945,
+  0.945
+ ],
+ "gate": {
+  "x": 43.029,
+  "y": 0.0,
+  "width": 9.0
+ },
+ "blocks": [
+  {
+   "id": "A",
+   "kind": "square",
+   "towers": [
+    "A"
+   ],
+   "rect": [
+    18.459,
+    35.658,
+    5.796,
+    31.689
+   ],
+   "core": [
+    25.515,
+    28.602,
+    13.387,
+    24.098
+   ],
+   "flats": [
+    {
+     "no": "103",
+     "type": "A",
+     "rect": [
+      18.459,
+      25.515,
+      5.796,
+      18.742
+     ],
+     "face": "W",
+     "views": [
+      {
+       "dir": "W",
+       "label": "Living & balcony"
+      },
+      {
+       "dir": "S",
+       "label": "Bedroom side"
+      }
+     ],
+     "tag": "Garden & campus facing",
+     "tower": "A"
+    },
+    {
+     "no": "104",
+     "type": "A",
+     "rect": [
+      18.459,
+      25.515,
+      18.742,
+      31.689
+     ],
+     "face": "W",
+     "views": [
+      {
+       "dir": "W",
+       "label": "Living & balcony"
+      },
+      {
+       "dir": "N",
+       "label": "Bedroom side"
+      }
+     ],
+     "tag": "Garden & campus facing",
+     "tower": "A"
+    },
+    {
+     "no": "102",
+     "type": "A",
+     "rect": [
+      28.602,
+      35.658,
+      5.796,
+      18.742
+     ],
+     "face": "E",
+     "views": [
+      {
+       "dir": "E",
+       "label": "Living & balcony"
+      },
+      {
+       "dir": "S",
+       "label": "Bedroom side"
+      }
+     ],
+     "tag": "Road facing",
+     "tower": "A"
+    },
+    {
+     "no": "101",
+     "type": "A",
+     "rect": [
+      28.602,
+      35.658,
+      18.742,
+      31.689
+     ],
+     "face": "E",
+     "views": [
+      {
+       "dir": "E",
+       "label": "Living & balcony"
+      },
+      {
+       "dir": "N",
+       "label": "Bedroom side"
+      }
+     ],
+     "tag": "Road facing",
+     "tower": "A"
+    }
+   ]
+  },
+  {
+   "id": "B",
+   "kind": "square",
+   "towers": [
+    "B"
+   ],
+   "rect": [
+    18.459,
+    35.658,
+    -31.5,
+    -5.67
+   ],
+   "core": [
+    25.515,
+    28.602,
+    -23.94,
+    -13.23
+   ],
+   "flats": [
+    {
+     "no": "104",
+     "type": "A",
+     "rect": [
+      18.459,
+      25.515,
+      -31.5,
+      -18.585
+     ],
+     "face": "W",
+     "views": [
+      {
+       "dir": "W",
+       "label": "Living & balcony"
+      },
+      {
+       "dir": "S",
+       "label": "Bedroom side"
+      }
+     ],
+     "tag": "Garden & campus facing",
+     "tower": "B"
+    },
+    {
+     "no": "103",
+     "type": "A",
+     "rect": [
+      18.459,
+      25.515,
+      -18.585,
+      -5.67
+     ],
+     "face": "W",
+     "views": [
+      {
+       "dir": "W",
+       "label": "Living & balcony"
+      },
+      {
+       "dir": "N",
+       "label": "Bedroom side"
+      }
+     ],
+     "tag": "Garden & campus facing",
+     "tower": "B"
+    },
+    {
+     "no": "101",
+     "type": "A",
+     "rect": [
+      28.602,
+      35.658,
+      -31.5,
+      -18.585
+     ],
+     "face": "E",
+     "views": [
+      {
+       "dir": "E",
+       "label": "Living & balcony"
+      },
+      {
+       "dir": "S",
+       "label": "Bedroom side"
+      }
+     ],
+     "tag": "Road facing",
+     "tower": "B"
+    },
+    {
+     "no": "102",
+     "type": "A",
+     "rect": [
+      28.602,
+      35.658,
+      -18.585,
+      -5.67
+     ],
+     "face": "E",
+     "views": [
+      {
+       "dir": "E",
+       "label": "Living & balcony"
+      },
+      {
+       "dir": "N",
+       "label": "Bedroom side"
+      }
+     ],
+     "tag": "Road facing",
+     "tower": "B"
+    }
+   ]
+  },
+  {
+   "id": "DC",
+   "kind": "long",
+   "towers": [
+    "D",
+    "C"
+   ],
+   "rect": [
+    -36.54,
+    10.08,
+    -29.925,
+    -11.529
+   ],
+   "core": [
+    -30.996,
+    4.284,
+    -21.893,
+    -19.561
+   ],
+   "flats": [
+    {
+     "tower": "D",
+     "no": "101",
+     "type": "B",
+     "rect": [
+      -36.54,
+      -24.381,
+      -29.925,
+      -21.893
+     ],
+     "face": "S",
+     "views": [
+      {
+       "dir": "S",
+       "label": "Living room"
+      },
+      {
+       "dir": "W",
+       "label": "Bedroom balcony"
+      }
+     ],
+     "tag": "Open side facing"
+    },
+    {
+     "tower": "D",
+     "no": "104",
+     "type": "B",
+     "rect": [
+      -36.54,
+      -24.381,
+      -19.561,
+      -11.529
+     ],
+     "face": "N",
+     "views": [
+      {
+       "dir": "N",
+       "label": "Living room"
+      },
+      {
+       "dir": "W",
+       "label": "Bedroom balcony"
+      }
+     ],
+     "tag": "Garden facing"
+    },
+    {
+     "tower": "D",
+     "no": "102",
+     "type": "C",
+     "rect": [
+      -24.381,
+      -13.356,
+      -29.925,
+      -21.893
+     ],
+     "face": "S",
+     "views": [
+      {
+       "dir": "S",
+       "label": "Living room"
+      }
+     ],
+     "tag": "Open side facing"
+    },
+    {
+     "tower": "D",
+     "no": "103",
+     "type": "C",
+     "rect": [
+      -24.381,
+      -13.356,
+      -19.561,
+      -11.529
+     ],
+     "face": "N",
+     "views": [
+      {
+       "dir": "N",
+       "label": "Living room"
+      }
+     ],
+     "tag": "Garden facing"
+    },
+    {
+     "tower": "C",
+     "no": "102",
+     "type": "C",
+     "rect": [
+      -13.356,
+      -2.016,
+      -29.925,
+      -21.893
+     ],
+     "face": "S",
+     "views": [
+      {
+       "dir": "S",
+       "label": "Living room"
+      }
+     ],
+     "tag": "Open side facing"
+    },
+    {
+     "tower": "C",
+     "no": "103",
+     "type": "C",
+     "rect": [
+      -13.356,
+      -2.016,
+      -19.561,
+      -11.529
+     ],
+     "face": "N",
+     "views": [
+      {
+       "dir": "N",
+       "label": "Living room"
+      }
+     ],
+     "tag": "Garden facing"
+    },
+    {
+     "tower": "C",
+     "no": "101",
+     "type": "B",
+     "rect": [
+      -2.016,
+      10.08,
+      -29.925,
+      -21.893
+     ],
+     "face": "S",
+     "views": [
+      {
+       "dir": "S",
+       "label": "Living room"
+      },
+      {
+       "dir": "E",
+       "label": "Bedroom balcony"
+      }
+     ],
+     "tag": "Open side facing"
+    },
+    {
+     "tower": "C",
+     "no": "104",
+     "type": "B",
+     "rect": [
+      -2.016,
+      10.08,
+      -19.561,
+      -11.529
+     ],
+     "face": "N",
+     "views": [
+      {
+       "dir": "N",
+       "label": "Living room"
+      },
+      {
+       "dir": "E",
+       "label": "Bedroom balcony"
+      }
+     ],
+     "tag": "Garden facing"
+    }
+   ]
+  },
+  {
+   "id": "EF",
+   "kind": "long",
+   "towers": [
+    "E",
+    "F"
+   ],
+   "rect": [
+    -36.54,
+    10.08,
+    11.781,
+    30.24
+   ],
+   "core": [
+    -30.996,
+    4.284,
+    19.845,
+    22.176
+   ],
+   "flats": [
+    {
+     "tower": "E",
+     "no": "104",
+     "type": "B",
+     "rect": [
+      -36.54,
+      -24.381,
+      11.781,
+      19.845
+     ],
+     "face": "S",
+     "views": [
+      {
+       "dir": "S",
+       "label": "Living room"
+      },
+      {
+       "dir": "W",
+       "label": "Bedroom balcony"
+      }
+     ],
+     "tag": "Garden facing"
+    },
+    {
+     "tower": "E",
+     "no": "101",
+     "type": "B",
+     "rect": [
+      -36.54,
+      -24.381,
+      22.176,
+      30.24
+     ],
+     "face": "N",
+     "views": [
+      {
+       "dir": "N",
+       "label": "Living room"
+      },
+      {
+       "dir": "W",
+       "label": "Bedroom balcony"
+      }
+     ],
+     "tag": "Open side facing"
+    },
+    {
+     "tower": "E",
+     "no": "103",
+     "type": "C",
+     "rect": [
+      -24.381,
+      -13.356,
+      11.781,
+      19.845
+     ],
+     "face": "S",
+     "views": [
+      {
+       "dir": "S",
+       "label": "Living room"
+      }
+     ],
+     "tag": "Garden facing"
+    },
+    {
+     "tower": "E",
+     "no": "102",
+     "type": "C",
+     "rect": [
+      -24.381,
+      -13.356,
+      22.176,
+      30.24
+     ],
+     "face": "N",
+     "views": [
+      {
+       "dir": "N",
+       "label": "Living room"
+      }
+     ],
+     "tag": "Open side facing"
+    },
+    {
+     "tower": "F",
+     "no": "103",
+     "type": "C",
+     "rect": [
+      -13.356,
+      -2.016,
+      11.781,
+      19.845
+     ],
+     "face": "S",
+     "views": [
+      {
+       "dir": "S",
+       "label": "Living room"
+      }
+     ],
+     "tag": "Garden facing"
+    },
+    {
+     "tower": "F",
+     "no": "102",
+     "type": "C",
+     "rect": [
+      -13.356,
+      -2.016,
+      22.176,
+      30.24
+     ],
+     "face": "N",
+     "views": [
+      {
+       "dir": "N",
+       "label": "Living room"
+      }
+     ],
+     "tag": "Open side facing"
+    },
+    {
+     "tower": "F",
+     "no": "104",
+     "type": "B",
+     "rect": [
+      -2.016,
+      10.08,
+      11.781,
+      19.845
+     ],
+     "face": "S",
+     "views": [
+      {
+       "dir": "S",
+       "label": "Living room"
+      },
+      {
+       "dir": "E",
+       "label": "Bedroom balcony"
+      }
+     ],
+     "tag": "Garden facing"
+    },
+    {
+     "tower": "F",
+     "no": "101",
+     "type": "B",
+     "rect": [
+      -2.016,
+      10.08,
+      22.176,
+      30.24
+     ],
+     "face": "N",
+     "views": [
+      {
+       "dir": "N",
+       "label": "Living room"
+      },
+      {
+       "dir": "E",
+       "label": "Bedroom balcony"
+      }
+     ],
+     "tag": "Open side facing"
+    }
+   ]
+  }
+ ],
+ "planterFloors": [
+  3,
+  7,
+  11
+ ]
+}

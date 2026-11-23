@@ -1,0 +1,31 @@
+// Minimal line icons (24px grid)
+const P: Record<string, string> = {
+  gate: '<path d="M3 21V8l9-5 9 5v13M7 21v-8h10v8M10 13v8M14 13v8"/>',
+  shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+  cctv: '<path d="M3 7l13 4-2 5-12-4z"/><path d="M14 15l2 3h4M20 13v7"/>',
+  water: '<path d="M12 3s6 7 6 11a6 6 0 01-12 0c0-4 6-11 6-11z"/>',
+  tree: '<path d="M12 21v-6M7 15h10l-5-12z"/>',
+  kids: '<circle cx="12" cy="5" r="2"/><path d="M12 7v7M8 10h8M9 21l3-7 3 7"/>',
+  gazebo: '<path d="M3 10l9-6 9 6M5 10v10M19 10v10M3 20h18M9 20v-5h6v5"/>',
+  bench: '<path d="M4 12h16M5 12V8h14v4M6 12v6M18 12v6"/>',
+  desk: '<path d="M3 10h18v3H3zM5 13v7M19 13v7M9 10V6h6v4"/>',
+  sofa: '<path d="M4 11V8a2 2 0 012-2h12a2 2 0 012 2v3M3 11h18v6H3zM5 17v2M19 17v2"/>',
+  lift: '<rect x="5" y="3" width="14" height="18" rx="1"/><path d="M12 3v18M9 9l-1.5 2h3zM15 13l1.5-2h-3z"/>',
+  fire: '<path d="M12 3c3 4 5 6 5 10a5 5 0 01-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-9z"/>',
+  bolt: '<path d="M13 3L5 14h6l-1 7 8-11h-6z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M5 19l1.5-1.5M17.5 6.5L19 5"/>',
+  car: '<path d="M5 16h14v-4l-2-5H7l-2 5zM3 16h18v3H3z"/><circle cx="7.5" cy="16.5" r="1"/><circle cx="16.5" cy="16.5" r="1"/>',
+  wa: '<path d="M20 12a8 8 0 01-11.8 7L4 20l1.1-4A8 8 0 1120 12z"/><path d="M9 9c0 3 3 6 6 6l1-1.5-2-1-1 1c-1 0-2.5-1.5-2.5-2.5l1-1-1-2z"/>',
+  phone: '<path d="M5 3h4l2 5-2.5 1.5a11 11 0 006 6L16 13l5 2v4a2 2 0 01-2 2A17 17 0 013 5a2 2 0 012-2z"/>',
+  eye: '<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  cube: '<path d="M12 2l9 5v10l-9 5-9-5V7z"/><path d="M12 22V12M21 7l-9 5-9-5"/>',
+  plan: '<rect x="3" y="3" width="18" height="18" rx="1"/><path d="M3 12h8M11 3v13M15 12h6"/>',
+  calc: '<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 6h8M8 11h2M14 11h2M8 15h2M14 15h2M8 19h2M14 19h2"/>',
+  heart: '<path d="M12 20s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 10c0 5.5-7 10-7 10z"/>',
+  share: '<circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.2 11l7.6-3.8M8.2 13l7.6 3.8"/>',
+  moon: '<path d="M20 15A8 8 0 019 4a8 8 0 1011 11z"/>',
+  reset: '<path d="M4 12a8 8 0 108-8H8M8 1L5 4l3 3"/>',
+  pin: '<path d="M12 22s7-7 7-12a7 7 0 10-14 0c0 5 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/>',
+};
+export const icon = (k: string, cls = '') =>
+  `<svg class="ic ${cls}" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${P[k] || ''}</svg>`;
