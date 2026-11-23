@@ -83,25 +83,33 @@ for (a, b, c, d) in ((px0 - 0.25, px0, py0, py1), (px0, px1, py1, py1 + 0.25), (
 gx, gy, gw = site['gate']['x'], site['gate']['y'], site['gate']['width']
 # front: stone pylons + wood louvres + signage
 for (y0, y1, sgn) in ((py0, gy - gw / 2, -1), (gy + gw / 2, py1, 1)):
-    B(px1 - 0.3, px1, y0, y1, 0, 0.6, M['stone'])
-    for yy in [y0 + i * 0.18 for i in range(int((y1 - y0) / 0.18))]:
-        B(px1 - 0.25, px1 - 0.1, yy, yy + 0.09, 0.6, 2.6, M['wood'])
-    B(px1 - 0.3, px1, y0, y1, 2.6, 2.75, M['charcoal'])
-    # signage wall near the gate
+    # signage wall near the gate: stone porcelain face set back 0.9 m behind a low planter (photo 164615648)
     sy0, sy1 = (gy - gw / 2 - 9, gy - gw / 2 - 0.4) if sgn < 0 else (gy + gw / 2 + 0.4, gy + gw / 2 + 9)
-    B(px1 - 1.2, px1 - 0.3, sy0, sy1, 0, 3.4, M['stone'], top=M['charcoal'])
-    B(px1 - 1.0, px1 - 0.4, sy0 - 0.4, sy0, 0, 3.8, M['charcoal'])
-    B(px1 - 1.0, px1 - 0.4, sy1, sy1 + 0.4, 0, 3.8, M['charcoal'])
+    # boundary: stone plinth + wood louvres + charcoal cap, interrupted where the signage wall stands
+    for (a0, a1) in ((y0, min(sy0, sy1) - 0.45), (max(sy0, sy1) + 0.45, y1)):
+        if a1 - a0 < 0.3:
+            continue
+        B(px1 - 0.3, px1, a0, a1, 0, 0.6, M['stone'])
+        for yy in [a0 + i * 0.18 for i in range(int((a1 - a0) / 0.18))]:
+            B(px1 - 0.25, px1 - 0.1, yy, yy + 0.09, 0.6, 2.6, M['wood'])
+        B(px1 - 0.3, px1, a0, a1, 2.6, 2.75, M['charcoal'])
+    B(px1 - 1.5, px1 - 0.9, sy0, sy1, 0, 3.4, M['stone'], top=M['charcoal'])
+    B(px1 - 1.6, px1 - 0.8, sy0 - 0.45, sy0, 0, 3.8, M['charcoal'])
+    B(px1 - 1.6, px1 - 0.8, sy1, sy1 + 0.45, 0, 3.8, M['charcoal'])
+    B(px1 - 1.55, px1 - 0.85, sy0 - 0.05, sy1 + 0.05, 3.4, 3.55, M['charcoal'])
     cyy = (sy0 + sy1) / 2
     if sgn > 0:   # bronze letters, as on site (photo 164615648)
-        text('VRAJ', px1 - 0.27, cyy, 2.05, 0.75, M['gold'], rot_z=math.pi / 2)
-        text('PLATINUM', px1 - 0.27, cyy, 1.25, 0.62, M['gold'], rot_z=math.pi / 2)
+        text('VRAJ', px1 - 0.87, cyy, 2.15, 0.8, M['gold'], rot_z=math.pi / 2, extrude=0.03)
+        text('PLATINUM', px1 - 0.87, cyy, 1.35, 0.62, M['gold'], rot_z=math.pi / 2, extrude=0.03)
     else:         # perforated bronze panel with logo (photo 164556602)
-        B(px1 - 0.3, px1 - 0.24, sy0 + 1.0, sy1 - 1.6, 0.55, 3.0, M['bronze'])
-    B(px1 - 1.7, px1 - 1.2, sy0, sy1, 0, 0.55, M['charcoal'], top=M['soil'])
-    for k in range(int((sy1 - sy0) / 0.45)):
-        yy = sy0 + 0.25 + k * 0.45
-        sphere(f'cord{sgn}{k}', 0.32, px1 - 1.45, yy, 0.85, M['cordyline' if k % 2 else 'leaf'], sub=1, sz=1.3)
+        B(px1 - 0.9, px1 - 0.86, sy0 + 1.0, sy1 - 1.6, 0.55, 3.0, M['bronze'])
+        text('VRAJ', px1 - 0.83, sy1 - 3.2, 1.3, 0.42, M['gold'], rot_z=math.pi / 2, extrude=0.02)
+    # low planter in front of the wall: charcoal kerb, soil, cordylines + bird-of-paradise mix
+    B(px1 - 0.85, px1 - 0.05, sy0, sy1, 0, 0.45, M['charcoal'], top=M['soil'])
+    B(px1 - 0.78, px1 - 0.12, sy0 + 0.08, sy1 - 0.08, 0.45, 0.9, M['hedge'], bevel=0.12)
+    for k in range(int((sy1 - sy0) / 1.4)):
+        yy = sy0 + 0.7 + k * 1.4
+        sphere(f'cord{sgn}{k}', 0.24, px1 - 0.45, yy, 1.02, M['cordyline'], sub=2, sz=1.35)
         objs.append(bpy.data.objects[f'cord{sgn}{k}'])
 # central guard cabin between the in/out drives (photo 164552954): charcoal box, stone panel, glass slit
 B(gx - 2.4, gx - 0.4, gy - 0.9, gy + 0.9, 0, 3.0, M['charcoal'], top=M['charcoal'])
@@ -114,12 +122,13 @@ for side in (-1, 1):
     g0 = gy + side * (gw / 2 + 0.2)
     g1 = g0 + side * 4.2
     a, b_ = min(g0, g1), max(g0, g1)
-    B(px1 - 0.7, px1 - 0.62, a, b_, 0.1, 0.16, M['steel'])
-    B(px1 - 0.7, px1 - 0.62, a, b_, 2.3, 2.36, M['steel'])
+    gxx = px1 - 1.85  # parked behind the signage walls, as the real sliding gates are
+    B(gxx - 0.04, gxx + 0.04, a, b_, 0.1, 0.16, M['steel'])
+    B(gxx - 0.04, gxx + 0.04, a, b_, 2.3, 2.36, M['steel'])
     k = a + 0.1
     while k < b_ - 0.1:
-        B(px1 - 0.72, px1 - 0.6, k, k + 0.16, 0.12, 2.36, M['wood'])
-        B(px1 - 0.69, px1 - 0.63, k + 0.2, k + 0.23, 0.12, 2.36, M['steel'])
+        B(gxx - 0.06, gxx + 0.06, k, k + 0.16, 0.12, 2.36, M['wood'])
+        B(gxx - 0.03, gxx + 0.03, k + 0.2, k + 0.23, 0.12, 2.36, M['steel'])
         k += 0.42
 # road (30 m) with footpaths, median and markings
 rx0, rx1 = site['road']['rect'][0], site['road']['rect'][1]

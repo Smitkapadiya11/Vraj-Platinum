@@ -139,7 +139,7 @@ function renderDock() {
   const hr = $<HTMLInputElement>('#hour');
   hr.oninput = () => setHour(+hr.value);
   $('#dayNight').onclick = () => {
-    const target = world.night > 0.5 ? 16.5 : 19.6;
+    const target = world.night > 0.5 ? 10 : 19.6;
     const o = { h: world.hour };
     gsap.to(o, { h: target, duration: 1.8, ease: 'power2.inOut', onUpdate: () => setHour(o.h, false), onComplete: () => renderDock() });
   };
@@ -310,7 +310,6 @@ function towerCam(tw: string, floor?: number | null) {
 }
 function goCampus() {
   realView.close();
-  campus.photoOn = true; campus.setNight(world.night);
   context.clear.value = 40;
   if (S.mode === 'balcony') balcony.exit();
   if (S.mode === 'interior') interior.close();
@@ -324,7 +323,6 @@ function goCampus() {
 function selectTower(tw: string, floor: number | null = null) {
   stopTour();
   realView.close();
-  campus.photoOn = true; campus.setNight(world.night);
   context.clear.value = 40;
   if (S.mode === 'balcony') balcony.exit();
   if (S.mode === 'interior') interior.close();
@@ -350,7 +348,6 @@ function selectFloor(f: number) {
 function selectUnit(id: string) {
   stopTour();
   realView.close();
-  campus.photoOn = true; campus.setNight(world.night);
   const u = UNIT_BY_ID.get(id);
   if (!u) return;
   if (S.tower !== u.tower || S.floor !== u.floor) {
@@ -385,7 +382,6 @@ async function openBalcony(id: string, view: number) {
   const pose = campus.balconyPose(u, view);
   renderHud();
   context.clear.value = 0;
-  campus.photoOn = false; campus.setNight(world.night);
   realView.close();
   const srcs = realViewsFor(u.tower, u.floor, pose.dir as 'N' | 'S' | 'E' | 'W', u.tag.startsWith('Garden'));
   if (S.realIdx >= srcs.length) S.realIdx = 0;
@@ -420,7 +416,6 @@ async function openInterior(type: 'A' | 'B' | 'C') {
 }
 function closeOverlayMode() {
   realView.close();
-  campus.photoOn = true; campus.setNight(world.night);
   context.clear.value = 40;
   if (S.mode === 'balcony') balcony.exit();
   if (S.mode === 'interior') interior.close();
@@ -915,7 +910,7 @@ function renderAll() {
   document.documentElement.lang = getLang();
 }
 document.documentElement.lang = getLang();
-setHour(16.6);
+setHour(10); // morning sun on the road (east) and garden (south) faces the default views look at
 renderAll();
 world.renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); toast('Graphics paused — tap to reload'); setTimeout(() => location.reload(), 1500); });
 (window as unknown as { vp: unknown }).vp = { world, campus, S, droneTour, stopTour, selectUnit, openBalcony, openInterior, goCampus, setHour, selectTower, selectFloor };
