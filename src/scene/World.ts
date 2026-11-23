@@ -143,7 +143,7 @@ export class World {
     fog.color.setRGB(0.86 * day + 0.04, 0.89 * day + 0.06, 0.93 * day + 0.12);
     this.scene.background = null;
     this.sky.visible = true;
-    if (this.night > 0.6) {
+    if (this.night > 0.85) {
       this.sky.visible = false;
       this.scene.background = new THREE.Color().setRGB(0.012, 0.025, 0.06);
     }

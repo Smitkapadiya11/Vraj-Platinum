@@ -110,7 +110,26 @@ function renderDock() {
       <input id="hour" type="range" min="5.5" max="20.5" step="0.05" value="${world.hour}" aria-label="${t('timeOfDay')}"><b id="hourTxt">${fmtHour(world.hour)}</b></div>
     <div class="sep"></div>
     <button class="btn sm" id="dayNight">${world.night > 0.5 ? icon('sun') + t('day') : icon('moon') + t('night')}</button>
+    <button class="btn icon sm hide-m" id="zIn" title="Zoom in">+</button>
+    <button class="btn icon sm hide-m" id="zOut" title="Zoom out">−</button>
     <button class="btn icon sm" id="resetCam" title="Reset view">${icon('reset')}</button>`;
+  const dolly = (k: number) => {
+    if (S.mode === 'balcony' || S.mode === 'interior') return;
+    const c = world.controls, cam = world.camera;
+    const off = cam.position.clone().sub(c.target).multiplyScalar(k);
+    const len = THREE.MathUtils.clamp(off.length(), c.minDistance, c.maxDistance);
+    off.setLength(len);
+    gsap.to(cam.position, { x: c.target.x + off.x, y: c.target.y + off.y, z: c.target.z + off.z, duration: 0.6, ease: 'power2.out' });
+  };
+  $('#zIn').onclick = () => dolly(0.75);
+  $('#zOut').onclick = () => dolly(1.33);
+  (d.querySelector('.compass') as HTMLElement).onclick = () => {
+    if (S.mode === 'balcony' || S.mode === 'interior') return;
+    const c = world.controls, cam = world.camera;
+    const off = cam.position.clone().sub(c.target);
+    const h = Math.hypot(off.x, off.z);
+    gsap.to(cam.position, { x: c.target.x, z: c.target.z + h, duration: 1, ease: 'power2.inOut' });
+  };
   const hr = $<HTMLInputElement>('#hour');
   hr.oninput = () => setHour(+hr.value);
   $('#dayNight').onclick = () => {
@@ -220,7 +239,7 @@ function renderCard() {
     <div class="hero" style="background-image:url(${PLAN_IMG[u.type]})"><span class="badge"><i class="dot ${u.status}"></i>${t(u.status)}</span></div>
     <div class="body">
       <div class="eyebrow">${t('tower')} ${u.tower} · ${t('floor')} ${u.floor}</div>
-      <h3>${u.id}</h3>
+      <h3>${u.id} <span class="badge" style="font-family:var(--sans);font-size:11.5px;vertical-align:middle"><i class="dot ${u.status}"></i>${t(u.status)}</span></h3>
       <div class="muted" style="font-size:13px;margin-top:4px">${t('bhk')} · ${PLANS[u.type].label} · ${u.tag}</div>
       <div class="kv">
         <div><small>${t('roomArea')}</small><b>${u.roomArea} sq ft</b><small>${u.roomAreaM2} m²</small></div>
@@ -471,6 +490,14 @@ world.onTick(() => {
     l.el.style.transform = `translate(-50%,-50%) translate(${(pv.x * 0.5 + 0.5) * w}px, ${(-pv.y * 0.5 + 0.5) * h}px)`;
     l.el.style.display = pv.z < 1 ? '' : 'none';
   }
+  if (S.mode !== 'balcony') {
+    const cmp = document.getElementById('cmpN')?.parentElement;
+    if (cmp) {
+      const off = world.camera.position.clone().sub(world.controls.target);
+      const az = Math.atan2(off.x, off.z); // 0 when camera is south of target (looking north)
+      cmp.style.transform = `rotate(${THREE.MathUtils.radToDeg(az)}deg)`;
+    }
+  }
   // gentle idle drift on campus overview
   if (S.mode === 'campus' && entered && Date.now() - lastInteract > 9000) {
     world.controls.autoRotate = true;
@@ -581,12 +608,27 @@ function openLocation() {
           <a class="btn primary" href="${PROJECT.mapsUrl}" target="_blank" rel="noopener">${icon('pin')}${t('directions')}</a>
           <a class="btn" href="tel:${PROJECT.phone}">${icon('phone')}${PROJECT.phoneDisplay}</a>
           <button class="btn" id="locAerial">${icon('eye')}Aerial view in 3D</button>
-        </div></div>
+          <button class="btn" id="locGps">${icon('pin')}How far am I?</button>
+        </div><p class="note" id="gpsOut"></p></div>
       <div><div class="eyebrow" style="margin-bottom:10px">${t('nearby')}</div>
         <div class="nearby">${PROJECT.nearby.map((n) => `<div><span>${n.name}</span><small>${n.note}</small></div>`).join('')}</div>
         <p class="note">Landmarks as marked on the brochure’s location map. The 3D scene sits on live satellite imagery of the actual plot (21.2318° N, 72.9137° E).</p></div>
     </div>`);
   $('#locImg').onclick = () => lightbox('/img/location-map.jpg', 'Location map · Vraj Platinum');
+  $('#locGps').onclick = () => {
+    const out = $('#gpsOut');
+    if (!navigator.geolocation) { out.textContent = 'Location is not available in this browser.'; return; }
+    out.textContent = 'Finding you…';
+    navigator.geolocation.getCurrentPosition((p) => {
+      const R = 6371, toR = Math.PI / 180, la1 = p.coords.latitude * toR, la2 = SITE.geo.lat * toR;
+      const dla = la2 - la1, dlo = (SITE.geo.lng - p.coords.longitude) * toR;
+      const a = Math.sin(dla / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dlo / 2) ** 2;
+      const km = 2 * R * Math.asin(Math.sqrt(a));
+      const brg = (Math.atan2(Math.sin(dlo) * Math.cos(la2), Math.cos(la1) * Math.sin(la2) - Math.sin(la1) * Math.cos(la2) * Math.cos(dlo)) / toR + 360) % 360;
+      const names = ['north', 'north-east', 'east', 'south-east', 'south', 'south-west', 'west', 'north-west'];
+      out.innerHTML = `Vraj Platinum is <b>${km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(1) + ' km'}</b> to the ${names[Math.round(brg / 45) % 8]} of you (straight line). <a href="https://www.google.com/maps/dir/?api=1&origin=${p.coords.latitude},${p.coords.longitude}&destination=${SITE.geo.lat},${SITE.geo.lng}" target="_blank" rel="noopener">Route in Google Maps ↗</a>`;
+    }, () => { out.textContent = 'Location permission was not granted.'; }, { enableHighAccuracy: true, timeout: 10000 });
+  };
   $('#locAerial').onclick = () => { closeModal(); goCampus(); world.flyTo(toV(-120, -260, 520), new THREE.Vector3(0, 0, 0), 3); };
 }
 
