@@ -80,7 +80,7 @@ export class Campus {
       const anis = Math.min(8, this.world.renderer.capabilities.getMaxAnisotropy());
       m.map = tex(tx.f, tx.m, anis);
       if (tx.bump) { m.bumpMap = m.map; m.bumpScale = tx.bump; }
-      m.color.set(0xffffff);
+      m.color.set(tx.f === 'white' ? 0xdcdad5 : tx.f === 'lightgrey' ? 0xe6e6e3 : 0xffffff);
       m.needsUpdate = true;
     }
     if (n === 'glass' || n === 'carglass') {

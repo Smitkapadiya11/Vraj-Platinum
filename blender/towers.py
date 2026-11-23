@@ -139,19 +139,21 @@ def facade(lst, r, side, style, flat, kind):
     key = f"{flat['tower']}-{flat['no']}"
     if style == 'primary':
         # massive charcoal textured pier + bronze strip (photos 163134291 / 164556602)
-        sbox(lst, o, u, n, 0, 1.5, 0, 0.38, 0, FH, M['charcoal'])
-        sbox(lst, o, u, n, 1.5, 1.78, 0, 0.24, 0, FH, M['wood'])
-        m = (2.0 + L - 0.35) / 2
-        balcony_bay(lst, o, u, n, 2.0, m - 0.12, 1.3, kind)
+        P = 3.1 if L > 10 else 2.2
+        sbox(lst, o, u, n, 0, P, 0, 0.45, 0, FH, M['charcoal'])
+        sbox(lst, o, u, n, P, P + 0.3, 0, 0.3, 0, FH, M['wood'])
+        b0 = P + 0.5
+        m = (b0 + L - 0.35) / 2
+        balcony_bay(lst, o, u, n, b0, m - 0.12, 1.3, kind)
         balcony_bay(lst, o, u, n, m + 0.12, L - 0.35, 1.3, kind)
         sbox(lst, o, u, n, m - 0.12, m + 0.12, 0, 1.3, -0.28, FH - 0.28, M['white'])  # separator fin
         sbox(lst, o, u, n, L - 0.35, L, 0, 0.18, 0, FH, M['lightgrey'])
-        add_anchor(key, o, u, n, (2.0 + m - 0.12) / 2, 1.3, 'Living & balcony', side)
+        add_anchor(key, o, u, n, (b0 + m - 0.12) / 2, 1.3, 'Living & balcony', side)
     elif style == 'end':
         mid = L * 0.55
-        sbox(lst, o, u, n, 0, 0.9, 0, 0.32, 0, FH, M['charcoal'])
-        window(lst, o, u, n, 1.2, mid - 0.4, 0.9, 2.3, 2)
-        sbox(lst, o, u, n, 1.0, mid - 0.2, -0.01, 0.0, 0.0, FH, M['lightgrey'])
+        sbox(lst, o, u, n, 0, 1.9, 0, 0.4, 0, FH, M['charcoal'])
+        window(lst, o, u, n, 2.2, mid - 0.4, 0.9, 2.3, 2)
+        sbox(lst, o, u, n, 2.0, mid - 0.2, -0.01, 0.0, 0.0, FH, M['lightgrey'])
         balcony_bay(lst, o, u, n, mid + 0.1, L - 0.5, 1.1, kind)
         sbox(lst, o, u, n, mid - 0.2, mid + 0.1, 0, 0.26, 0, FH, M['wood'])
         add_anchor(key, o, u, n, (mid + 0.1 + L - 0.5) / 2, 1.1, 'Bedroom balcony', side)
@@ -159,7 +161,7 @@ def facade(lst, r, side, style, flat, kind):
         for a in (L * 0.25, L * 0.7):
             sbox(lst, o, u, n, a - 0.6, a + 0.6, -0.01, 0.0, 0.8, 2.6, M['lightgrey'])
             window(lst, o, u, n, a - 0.4, a + 0.4, 1.5, 2.3, 1)
-        sbox(lst, o, u, n, L * 0.44, L * 0.56, 0, 0.2, 0, FH, M['charcoal'])
+        sbox(lst, o, u, n, L * 0.4, L * 0.6, 0, 0.3, 0, FH, M['charcoal'])
 
 
 def build_block(b):
@@ -238,8 +240,10 @@ def build_block(b):
     pl = new_mod(f'{bid}_planter')
     for i, f in enumerate(b['flats']):
         o, u, n, L = side_frame(f['rect'], f['views'][0]['dir'])
-        m = (2.0 + L - 0.35) / 2
-        sbox(pl, o, u, n, 2.0, m - 0.12, 1.3, 1.36, -0.3, 0.14, M['wood'])
+        P = 3.1 if L > 10 else 2.2
+        b0 = P + 0.5
+        m = (b0 + L - 0.35) / 2
+        sbox(pl, o, u, n, b0, m - 0.12, 1.3, 1.36, -0.3, 0.14, M['wood'])
         sbox(pl, o, u, n, m + 0.12, L - 0.35, 1.3, 1.36, -0.3, 0.14, M['wood'])
 
 

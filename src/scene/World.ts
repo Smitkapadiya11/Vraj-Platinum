@@ -138,7 +138,7 @@ export class World {
     this.hemi.intensity = 0.25 + 0.75 * day;
     this.hemi.color.setRGB(0.8 - 0.55 * this.night, 0.88 - 0.6 * this.night, 1.0 - 0.55 * this.night);
     this.hemi.groundColor.setRGB(0.42 * day + 0.05, 0.36 * day + 0.04, 0.3 * day + 0.06);
-    this.renderer.toneMappingExposure = 0.92 + 0.45 * this.night;
+    this.renderer.toneMappingExposure = 0.84 + 0.5 * this.night;
     const fog = this.scene.fog as THREE.Fog;
     fog.color.setRGB(0.86 * day + 0.04, 0.89 * day + 0.06, 0.93 * day + 0.12);
     this.scene.background = null;
