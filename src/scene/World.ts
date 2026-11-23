@@ -83,7 +83,8 @@ export class World {
     this.composer.addPass(new RenderPass(this.scene, this.camera));
     if (!IS_MOBILE && !LITE) {
       this.ao = new GTAOPass(this.scene, this.camera, innerWidth, innerHeight);
-      this.ao.updateGtaoMaterial({ radius: 1.4, distanceExponent: 1.4, thickness: 1.5, scale: 1.0, samples: 12 });
+      this.ao.updateGtaoMaterial({ radius: 1.4, distanceExponent: 1.4, thickness: 1.5, scale: 1.0, samples: 8 });
+      this.ao.updatePdMaterial({ samples: 6, rings: 2, radius: 6 });
       this.ao.blendIntensity = 0.85;
       this.composer.addPass(this.ao);
     }
@@ -110,7 +111,6 @@ export class World {
 
   setQuality(q: 'high' | 'balanced') {
     this.quality = q;
-    if (this.ao) this.ao.enabled = q === 'high';
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, q === 'high' ? 2 : 1.25) * this.dprScale);
     this.resize();
   }
@@ -186,7 +186,8 @@ export class World {
 
   private loop = () => {
     requestAnimationFrame(this.loop);
-    const dt = Math.min(this.clock.getDelta(), 0.1);
+    const raw = this.clock.getDelta();
+    const dt = Math.min(raw, 0.1);
     const t = this.clock.elapsedTime;
     if (this.controls.enabled) this.controls.update();
     this.tickers.forEach((f) => f(dt, t));
@@ -201,11 +202,13 @@ export class World {
     }
     // adaptive resolution
     if (LITE) return;
+    if (raw > 0.25 || document.hidden) { this.fpsAcc = 0; this.fpsN = 0; return; } // throttled/background tab
     this.fpsAcc += dt; this.fpsN++;
     if (this.fpsAcc > 2.5) {
       const fps = this.fpsN / this.fpsAcc;
       this.fpsAcc = 0; this.fpsN = 0;
-      if (fps < 32 && this.dprScale > 0.6) { this.dprScale -= 0.15; this.setQuality(this.quality); }
+      if (fps < 45 && this.ao?.enabled) { this.ao.enabled = false; } // drop AO first
+      else if (fps < 32 && this.dprScale > 0.6) { this.dprScale -= 0.15; this.setQuality(this.quality); }
       else if (fps > 55 && this.dprScale < 1) { this.dprScale = Math.min(1, this.dprScale + 0.1); this.setQuality(this.quality); }
     }
   };
