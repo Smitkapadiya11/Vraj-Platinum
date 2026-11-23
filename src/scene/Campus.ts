@@ -6,6 +6,7 @@ import { UNITS, type Unit, DIR_VEC } from '../data/units';
 import BALCONIES from '../data/balconies.json';
 import { sunPosition, istDate } from './sun';
 import { PhotoFacades } from './PhotoFacades';
+import { makePalmGeometry, makeCrownGeometry, palmMaterial, crownMaterial } from './Foliage';
 
 // photo-derived tileable textures (public/tex, built by scripts/make_textures.py); size = metres per tile
 const TEX: Record<string, { f: string; m: number; bump?: number }> = {
@@ -202,8 +203,20 @@ export class Campus {
       const node = scene.getObjectByName(kind);
       const list = PROPS[kind];
       if (!node || !list?.length) continue;
+      if (kind === 'palm' || kind === 'tree') {
+        // keep the modelled trunk, replace blob leaves with painted alpha foliage
+        const foliage = kind === 'palm' ? new THREE.InstancedMesh(makePalmGeometry(), palmMaterial(), list.length)
+          : new THREE.InstancedMesh(makeCrownGeometry(), crownMaterial(), list.length);
+        list.forEach((p, i) => {
+          dummy.position.copy(toV(p.x, p.y)); dummy.rotation.set(0, p.r, 0); dummy.scale.setScalar(p.s); dummy.updateMatrix();
+          foliage.setMatrixAt(i, dummy.matrix);
+        });
+        foliage.castShadow = true; foliage.frustumCulled = false;
+        this.root.add(foliage);
+      }
       this.eachMesh(node, (m) => {
         const mat = (m.material as THREE.MeshStandardMaterial);
+        if ((kind === 'palm' && mat.name !== 'trunk') || (kind === 'tree' && mat.name !== 'bark')) return;
         this.tuneMaterial(mat);
         const im = new THREE.InstancedMesh(m.geometry, mat, list.length);
         list.forEach((p, i) => {

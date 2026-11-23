@@ -59,8 +59,8 @@ export class Context {
         if (Math.hypot(moves[0][0], moves[0][1]) > 15) continue;
         pts.forEach((p) => { p.x += moves[0][0]; p.y += moves[0][1]; });
       }
-      // walls
-      let u = 0;
+      // walls (random start so repeated photo tiles don't line up between buildings)
+      let u = Math.floor(Math.random() * 7) * 3.1;
       for (let i = 0; i < pts.length; i++) {
         const a = pts[i], b = pts[(i + 1) % pts.length];
         const len = a.distanceTo(b);

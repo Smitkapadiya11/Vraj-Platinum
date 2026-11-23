@@ -8,7 +8,7 @@ import { DIR_VEC } from '../data/units';
  * floor slicing still works. The modelled geometry stays underneath for depth, night lighting & balcony views.
  */
 const GH = SITE.groundH, FH = SITE.floorH, NF = SITE.floors;
-const OFFSET: Record<string, number> = { primary: 1.33, end: 1.13 };
+const OFFSET: Record<string, number> = { primary: 1.42, end: 1.2 };
 
 export class PhotoFacades {
   group = new THREE.Group();
