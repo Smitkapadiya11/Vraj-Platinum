@@ -10,6 +10,8 @@ import { BalconyView } from './scene/BalconyView';
 import { SITE, PROJECT, PLANS, GALLERY, SAMPLE_FLAT, PLAN_IMG } from './data/project';
 import { UNITS, UNIT_BY_ID, TOWERS, DIR_NAME, unitsOf, type Unit } from './data/units';
 import { t, setLang, getLang, onLang, type Lang } from './ui/i18n';
+import { L, DIR3, TAG3, VIEW3, room, ABOUT, HIGHLIGHTS3, AMENITIES3, SPECS_EXT3, SPECS_INT3, NEARBY3, TOUR3 } from './data/i18nContent';
+import { SITE_PHOTOS, SET_INFO, photoSrc, photosForView, type SitePhoto } from './data/sitePhotos';
 import { icon } from './ui/icons';
 
 // ------------------------------------------------------------------ setup
@@ -110,6 +112,7 @@ function renderDock() {
       <input id="hour" type="range" min="5.5" max="20.5" step="0.05" value="${world.hour}" aria-label="${t('timeOfDay')}"><b id="hourTxt">${fmtHour(world.hour)}</b></div>
     <div class="sep"></div>
     <button class="btn sm" id="dayNight">${world.night > 0.5 ? icon('sun') + t('day') : icon('moon') + t('night')}</button>
+    <button class="btn sm" id="tourBtn">${touring ? '■ ' + t('stopTour') : '▶ ' + t('droneTour')}</button>
     <button class="btn icon sm hide-m" id="zIn" title="Zoom in">+</button>
     <button class="btn icon sm hide-m" id="zOut" title="Zoom out">−</button>
     <button class="btn icon sm" id="resetCam" title="Reset view">${icon('reset')}</button>`;
@@ -121,6 +124,7 @@ function renderDock() {
     off.setLength(len);
     gsap.to(cam.position, { x: c.target.x + off.x, y: c.target.y + off.y, z: c.target.z + off.z, duration: 0.6, ease: 'power2.out' });
   };
+  $('#tourBtn').onclick = () => droneTour();
   $('#zIn').onclick = () => dolly(0.75);
   $('#zOut').onclick = () => dolly(1.33);
   (d.querySelector('.compass') as HTMLElement).onclick = () => {
@@ -190,6 +194,7 @@ function renderCtx() {
         <div class="tower-grid">${TOWERS.map((tw) => { const i = towerInfo(tw); return `<button class="tower-card" data-t="${tw}"><b>${tw}</b><span>Type ${i.types}</span><br><span><span class="dot available"></span> ${i.avail}/${i.total}</span></button>`; }).join('')}</div>
         <div class="legend"><span><i class="dot available"></i>${t('available')}</span><span><i class="dot hold"></i>${t('hold')}</span><span><i class="dot sold"></i>${t('sold')}</span>${PROJECT.commercial.demoInventory ? '<span style="opacity:.7">· demo availability</span>' : ''}</div>
         <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
+          <button class="btn sm primary" id="tourCtx">▶ ${t('droneTour')}</button>
           <button class="btn sm" id="findBtn">${t('filters')}</button>
           <button class="btn sm" id="sfBtn">${t('sampleFlat')}</button>
           <a class="btn sm" href="${PROJECT.brochure}" target="_blank" rel="noopener">${t('brochure')} ↗</a>
@@ -197,6 +202,7 @@ function renderCtx() {
       </div>`;
     c.querySelectorAll<HTMLElement>('.tower-card').forEach((b) => (b.onclick = () => selectTower(b.dataset.t!)));
     $('#findBtn').onclick = () => openResidences();
+    $('#tourCtx').onclick = () => droneTour();
     $('#sfBtn').onclick = () => openSampleFlat();
     return;
   }
@@ -212,7 +218,7 @@ function renderCtx() {
       <div class="unit-list">${unitsOf(tw, S.floor).map((u) => `
         <button class="unit-item ${u.id === S.unit ? 'on' : ''}" data-u="${u.id}">
           <i class="dot ${u.status}"></i>
-          <div><b>${u.id}</b><small>Type ${u.type} · ${u.roomArea} sq ft · ${DIR_NAME[u.facing]} · ${u.tag}</small></div>
+          <div><b>${u.id}</b><small>Type ${u.type} · ${u.roomArea} sq ft · ${L(DIR3[u.facing])} · ${L(TAG3[u.tag])}</small></div>
           <span class="muted" style="font-size:12px">${t(u.status)}</span>
         </button>`).join('')}</div>` : ''}
     <div class="eyebrow" style="margin-top:16px">${t('floor')}</div>
@@ -240,10 +246,10 @@ function renderCard() {
     <div class="body">
       <div class="eyebrow">${t('tower')} ${u.tower} · ${t('floor')} ${u.floor}</div>
       <h3>${u.id} <span class="badge" style="font-family:var(--sans);font-size:11.5px;vertical-align:middle"><i class="dot ${u.status}"></i>${t(u.status)}</span></h3>
-      <div class="muted" style="font-size:13px;margin-top:4px">${t('bhk')} · ${PLANS[u.type].label} · ${u.tag}</div>
+      <div class="muted" style="font-size:13px;margin-top:4px">${t('bhk')} · ${PLANS[u.type].label} · ${L(TAG3[u.tag])}</div>
       <div class="kv">
         <div><small>${t('roomArea')}</small><b>${u.roomArea} sq ft</b><small>${u.roomAreaM2} m²</small></div>
-        <div><small>${t('facing')}</small><b>${DIR_NAME[u.facing]}</b><small>${u.flat.views.map((v) => DIR_NAME[v.dir]).join(' + ')} views</small></div>
+        <div><small>${t('facing')}</small><b>${L(DIR3[u.facing])}</b><small>${u.flat.views.map((v) => L(DIR3[v.dir])).join(' + ')} ${t('views')}</small></div>
         <div><small>${t('height')}</small><b>${u.heightM.toFixed(1)} m</b><small>${t('floor')} ${u.floor} of 14</small></div>
         <div><small>${t('type')}</small><b>2 BHK · ${u.type}</b><small>${PLANS[u.type].rooms.filter((r) => r.kind === 'toilet').length} toilets${PLANS[u.type].rooms.some((r) => r.kind === 'balcony') ? ' · balcony' : ''}</small></div>
       </div>
@@ -256,7 +262,18 @@ function renderCard() {
         <a class="btn wide" id="aWa" href="${waLink(u)}" target="_blank" rel="noopener">${icon('wa')}${t('whatsapp')}</a>
         <button class="btn sm wide ghost" id="aShare">${icon('share')}${t('share')}</button>
       </div>
+      <div class="sunrow" id="sunRow">${icon('sun')}<span>${t('sunToday')}…</span></div>
     </div>`;
+  setTimeout(() => {
+    const blockers = [...campus.towerPick, context.group];
+    const y = new Date().getUTCFullYear();
+    const fmt = (h: number) => (h >= 1 ? `${h.toFixed(1)} h` : h > 0 ? `${Math.round(h * 60)} min` : '—');
+    const today = campus.sunHours(u, 0, new Date(), blockers);
+    const jun = campus.sunHours(u, 0, new Date(Date.UTC(y, 5, 21)), blockers);
+    const dec = campus.sunHours(u, 0, new Date(Date.UTC(y, 11, 21)), blockers);
+    const el = document.getElementById('sunRow');
+    if (el && S.unit === u.id) el.innerHTML = `${icon('sun')}<span>${t('sunToday')}: <b>${fmt(today)}</b> ${t('hrsToday')} · ${t('june')} ${fmt(jun)} · ${t('dec')} ${fmt(dec)}</span>`;
+  }, 60);
   $('#cardX').onclick = () => { S.unit = null; S.mode = 'tower'; refreshFloor(); renderCard(); renderCtx(); syncHash(); };
   $('#aBal').onclick = () => openBalcony(u.id, 0);
   $('#a3d').onclick = () => openInterior(u.type);
@@ -301,6 +318,7 @@ function goCampus() {
   syncHash();
 }
 function selectTower(tw: string, floor: number | null = null) {
+  stopTour();
   context.clear.value = 40;
   if (S.mode === 'balcony') balcony.exit();
   if (S.mode === 'interior') interior.close();
@@ -324,6 +342,7 @@ function selectFloor(f: number) {
   renderCtx(); renderCard(); rebuildUnitLabels(); syncHash();
 }
 function selectUnit(id: string) {
+  stopTour();
   const u = UNIT_BY_ID.get(id);
   if (!u) return;
   if (S.tower !== u.tower || S.floor !== u.floor) {
@@ -347,6 +366,7 @@ function refreshFloor() {
 }
 
 async function openBalcony(id: string, view: number) {
+  stopTour();
   const u = UNIT_BY_ID.get(id)!;
   if (S.mode === 'interior') interior.close();
   S.unit = id; S.tower = u.tower; S.floor = u.floor; S.view = view; S.mode = 'balcony';
@@ -361,6 +381,7 @@ async function openBalcony(id: string, view: number) {
   hint(t('lookAround'));
 }
 async function openInterior(type: 'A' | 'B' | 'C') {
+  stopTour();
   if (S.mode === 'balcony') balcony.exit();
   const prev = S.mode;
   S.mode = 'interior';
@@ -390,10 +411,10 @@ function renderHud(type?: string) {
     const pose = campus.balconyPose(u, S.view);
     h.classList.remove('hidden');
     chips.classList.remove('hidden');
-    h.innerHTML = `<div><div class="eyebrow">${t('realView')}</div><h3>${u.id} · ${pose.label}</h3>
-      <small>${t('floor')} ${u.floor} · ${u.heightM.toFixed(1)} m · ${t('facing')} <span class="heading" id="hdg">${DIR_NAME[pose.dir]}</span></small></div>
+    h.innerHTML = `<div><div class="eyebrow">${t('realView')}</div><h3>${u.id} · ${L(VIEW3[pose.label] || pose.label)}</h3>
+      <small>${t('floor')} ${u.floor} · ${u.heightM.toFixed(1)} m · ${t('facing')} <span class="heading" id="hdg">${L(DIR3[pose.dir])}</span></small></div>
       <button class="btn sm" id="hudX">${t('exitView')}</button>`;
-    chips.innerHTML = u.flat.views.map((v, i) => `<button class="chip ${i === S.view ? 'on' : ''}" data-v="${i}">${v.label} · ${DIR_NAME[v.dir]}</button>`).join('') +
+    chips.innerHTML = u.flat.views.map((v, i) => `<button class="chip ${i === S.view ? 'on' : ''}" data-v="${i}">${L(VIEW3[v.label] || v.label)} · ${L(DIR3[v.dir])}</button>`).join('') +
       `<button class="chip" data-f="-1">▼ ${t('floor')}</button><button class="chip" data-f="1">▲ ${t('floor')}</button><button class="chip" id="hud3d">${t('interior3d')}</button>`;
     chips.querySelectorAll<HTMLElement>('[data-v]').forEach((b) => (b.onclick = () => openBalcony(u.id, +b.dataset.v!)));
     chips.querySelectorAll<HTMLElement>('[data-f]').forEach((b) => (b.onclick = () => {
@@ -403,6 +424,13 @@ function renderHud(type?: string) {
     }));
     $('#hud3d').onclick = () => openInterior(u.type);
     $('#hudX').onclick = () => closeOverlayMode();
+    const rp = $('#realPh');
+    const ph = photosForView(u.tower, u.floor, pose.dir as 'N' | 'S' | 'E' | 'W', u.tag.startsWith('Garden'));
+    if (ph.length) {
+      rp.classList.remove('hidden');
+      rp.innerHTML = `<b>📷 ${t('realPhotos')}</b><small>${L(SET_INFO[ph[0].set])}</small><div class="rp-row">${ph.slice(0, 6).map((p, i) => `<button data-i="${i}" style="background-image:url(${photoSrc(p, true)})">${p.video ? '▶' : ''}</button>`).join('')}</div>`;
+      rp.querySelectorAll<HTMLElement>('[data-i]').forEach((b) => (b.onclick = () => { const p = ph[+b.dataset.i!]; lightbox(photoSrc(p), photoCaption(p)); }));
+    } else rp.classList.add('hidden');
     balcony.onHeading = (deg) => {
       const el = document.getElementById('hdg');
       const names = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
@@ -412,6 +440,7 @@ function renderHud(type?: string) {
     };
     return;
   }
+  $('#realPh').classList.add('hidden');
   if (S.mode === 'interior') {
     const ty = (type || UNIT_BY_ID.get(S.unit || '')?.type || 'A') as 'A' | 'B' | 'C';
     const P = PLANS[ty];
@@ -420,7 +449,7 @@ function renderHud(type?: string) {
     h.innerHTML = `<div><div class="eyebrow">${t('interior3d')} · ${P.label}</div><h3>2 BHK · ${Math.round(P.rooms.reduce((s, r) => s + (r.ft ? r.ft[0] * r.ft[1] : 0), 0))} sq ft</h3>
       <small>Furnished in the palette of the actual Vraj Platinum sample flat</small></div>
       <button class="btn sm" id="hudX">${t('close')}</button>`;
-    chips.innerHTML = `<button class="chip on" id="ov">Overview</button>` + P.rooms.filter((r) => r.dim).map((r) => `<button class="chip" data-r="${r.id}">${r.name}</button>`).join('') +
+    chips.innerHTML = `<button class="chip on" id="ov">${t('overview')}</button>` + P.rooms.filter((r) => r.dim).map((r) => `<button class="chip" data-r="${r.id}">${room(r.name)}</button>`).join('') +
       (S.unit ? `<button class="chip" id="toBal">${t('balconyView')}</button>` : '');
     chips.querySelectorAll<HTMLElement>('[data-r]').forEach((b) => (b.onclick = () => {
       chips.querySelectorAll('.chip').forEach((x) => x.classList.remove('on'));
@@ -435,9 +464,48 @@ function renderHud(type?: string) {
   }
   h.classList.add('hidden');
   chips.classList.add('hidden');
+  $('#realPh').classList.add('hidden');
   const cmp = document.getElementById('cmpN');
   if (cmp) cmp.parentElement!.style.transform = '';
 }
+
+// ------------------------------------------------------------------ drone tour
+let touring = false;
+const TOUR: { p: [number, number, number]; t: [number, number, number]; d: number; c: number }[] = [
+  { p: [230, 170, 250], t: [0, 12, 0], d: 4.5, c: 0 },
+  { p: [78, 7, 16], t: [40, 3.5, 0], d: 5, c: 1 },
+  { p: [92, 38, -58], t: [27, 24, 0], d: 4.5, c: 2 },
+  { p: [16, 10, 0], t: [-30, 7, 0], d: 5, c: 3 },
+  { p: [-26, 13, 0], t: [-48, 9, 0], d: 4, c: 3 },
+  { p: [-12, 74, 46], t: [-13, 47, 20], d: 5, c: 4 },
+  { p: [-230, 130, -190], t: [0, 18, 0], d: 6, c: 5 },
+];
+async function droneTour() {
+  if (touring) { stopTour(); return; }
+  goCampus();
+  touring = true;
+  world.controls.enabled = false;
+  renderDock();
+  const cap = $('#tourCap');
+  cap.classList.remove('hidden');
+  for (const k of TOUR) {
+    if (!touring) break;
+    cap.textContent = L(TOUR3[k.c]);
+    await world.flyTo(new THREE.Vector3(...k.p), new THREE.Vector3(...k.t), k.d, 'sine.inOut');
+    if (!touring) break;
+    await new Promise((r) => setTimeout(r, 900));
+  }
+  if (touring) { await world.flyTo(CAMPUS_POS, CAMPUS_TARGET, 4, 'sine.inOut'); stopTour(); }
+}
+function stopTour() {
+  if (!touring) return;
+  touring = false;
+  world.stopFlight();
+  world.controls.enabled = true;
+  $('#tourCap').classList.add('hidden');
+  renderDock();
+}
+canvas.addEventListener('pointerdown', () => { if (touring) stopTour(); });
 
 // ------------------------------------------------------------------ 3D labels & picking
 const labelLayer = $('#labels');
@@ -565,18 +633,24 @@ $('#modal').addEventListener('click', (e) => { if (e.target === $('#modal')) clo
 function lightbox(src: string, cap = '') {
   const d = document.createElement('div');
   d.className = 'lightbox';
-  d.innerHTML = `<img src="${src}" alt=""><p>${cap}</p>`;
-  d.onclick = () => d.remove();
+  d.innerHTML = src.endsWith('.mp4')
+    ? `<video src="${src}" autoplay muted loop playsinline controls></video><p>${cap}</p>`
+    : `<img src="${src}" alt=""><p>${cap}</p>`;
+  d.onclick = (e) => { if ((e.target as HTMLElement).tagName !== 'VIDEO') d.remove(); };
   document.body.appendChild(d);
 }
+function photoCaption(p: SitePhoto) { return `${L(SET_INFO[p.set])} · 23 Nov 2026`; }
 
-function openGallery(cat = 'All') {
-  const cats = ['All', ...new Set(GALLERY.map((g) => g.cat))];
-  const list = GALLERY.filter((g) => cat === 'All' || g.cat === cat);
+function openGallery(cat = 'site') {
+  const siteLbl = t('siteToday');
+  const cats = ['site', 'All', ...new Set(GALLERY.map((g) => g.cat))];
+  const items = cat === 'site'
+    ? SITE_PHOTOS.map((p) => ({ src: photoSrc(p), thumb: photoSrc(p, true), title: photoCaption(p), video: !!p.video }))
+    : GALLERY.filter((g) => cat === 'All' || g.cat === cat).map((g) => ({ src: g.src, thumb: g.src, title: g.title, video: false }));
   openModal(`<div class="eyebrow">Vraj Platinum</div><h2>${t('gallery')}</h2>
-    <div class="tabs">${cats.map((c) => `<button class="chip ${c === cat ? 'on' : ''}" data-c="${c}">${c}</button>`).join('')}</div>
-    <div class="grid-g">${list.map((g) => `<figure data-s="${g.src}" data-t="${g.title}"><img loading="lazy" src="${g.src}" alt="${g.title}"><figcaption>${g.title}</figcaption></figure>`).join('')}</div>
-    <p class="note">Artist’s impressions from the official Vraj Platinum brochure.</p>`);
+    <div class="tabs">${cats.map((c) => `<button class="chip ${c === cat ? 'on' : ''}" data-c="${c}">${c === 'site' ? '📷 ' + siteLbl : c}</button>`).join('')}</div>
+    <div class="grid-g">${items.map((g) => `<figure data-s="${g.src}" data-t="${g.title}"><img loading="lazy" src="${g.thumb}" alt="${g.title}">${g.video ? '<span class="play">▶</span>' : ''}<figcaption>${g.title}</figcaption></figure>`).join('')}</div>
+    <p class="note">${cat === 'site' ? 'Actual photographs and clips taken on site, 23 November 2026.' : 'Artist’s impressions from the official Vraj Platinum brochure.'}</p>`);
   $('#sheet').querySelectorAll<HTMLElement>('[data-c]').forEach((b) => (b.onclick = () => openGallery(b.dataset.c!)));
   $('#sheet').querySelectorAll<HTMLElement>('figure').forEach((f) => (f.onclick = () => lightbox(f.dataset.s!, f.dataset.t)));
 }
@@ -611,7 +685,7 @@ function openLocation() {
           <button class="btn" id="locGps">${icon('pin')}How far am I?</button>
         </div><p class="note" id="gpsOut"></p></div>
       <div><div class="eyebrow" style="margin-bottom:10px">${t('nearby')}</div>
-        <div class="nearby">${PROJECT.nearby.map((n) => `<div><span>${n.name}</span><small>${n.note}</small></div>`).join('')}</div>
+        <div class="nearby">${NEARBY3.map((n) => `<div><span>${L(n.t)}</span><small>${L(n.note)}</small></div>`).join('')}</div>
         <p class="note">Landmarks as marked on the brochure’s location map. The 3D scene sits on live satellite imagery of the actual plot (21.2318° N, 72.9137° E).</p></div>
     </div>`);
   $('#locImg').onclick = () => lightbox('/img/location-map.jpg', 'Location map · Vraj Platinum');
@@ -634,13 +708,15 @@ function openLocation() {
 
 function openSpecs() {
   openModal(`<div class="eyebrow">Vraj Platinum</div><h2>${t('specs')}</h2>
+    <p style="max-width:70ch;line-height:1.6;margin:0 0 16px">${L(ABOUT)}</p>
+    <div class="stat-row" style="margin-bottom:12px"><span><b>6</b> ${t('towersW')}</span><span><b>G+14</b></span><span><b>336</b> ${t('homesW')}</span><span><b>3</b> ${t('planTypes')}</span><span><b>650 · 655 · 641</b> sq ft</span></div>
     <div class="eyebrow" style="margin:6px 0 10px">${t('highlights')}</div>
-    <div class="amen">${PROJECT.highlights.map((h) => `<div>${icon('sun')}${h}</div>`).join('')}</div>
+    <div class="amen">${HIGHLIGHTS3.map((h) => `<div>${icon('sun')}${L(h)}</div>`).join('')}</div>
     <div class="eyebrow" style="margin:22px 0 10px">${t('amenities')}</div>
-    <div class="amen">${PROJECT.amenities.map((a) => `<div>${icon(a.icon)}${a.name}</div>`).join('')}</div>
+    <div class="amen">${AMENITIES3.map((a) => `<div>${icon(a.icon)}${L(a.t)}</div>`).join('')}</div>
     <div class="cols" style="margin-top:22px">
-      <div><div class="eyebrow">${t('external')}</div>${PROJECT.specsExternal.map(([k, v]) => `<div class="spec"><b>${k}</b><span>${v}</span></div>`).join('')}</div>
-      <div><div class="eyebrow">${t('internal')}</div>${PROJECT.specsInternal.map(([k, v]) => `<div class="spec"><b>${k}</b><span>${v}</span></div>`).join('')}</div>
+      <div><div class="eyebrow">${t('external')}</div>${SPECS_EXT3.map(([k, v]) => `<div class="spec"><b>${L(k)}</b><span>${L(v)}</span></div>`).join('')}</div>
+      <div><div class="eyebrow">${t('internal')}</div>${SPECS_INT3.map(([k, v]) => `<div class="spec"><b>${L(k)}</b><span>${L(v)}</span></div>`).join('')}</div>
     </div>
     <div class="eyebrow" style="margin:22px 0 10px">Team</div>
     <div class="amen">${PROJECT.team.map((m) => `<div><span><small class="muted">${m.role}</small><br><b>${m.name}</b></span></div>`).join('')}</div>
@@ -652,7 +728,7 @@ function openPlan(u: Unit) {
   openModal(`<div class="eyebrow">${u.id} · ${P.label}</div><h2>${t('floorPlan')}</h2>
     <div class="cols"><div><img src="${PLAN_IMG[u.type]}" style="width:100%;border-radius:14px;background:#fff;cursor:zoom-in" id="planImg" alt="Plan"></div>
     <div><div class="eyebrow" style="margin-bottom:8px">${t('rooms')}</div>
-      ${P.rooms.filter((r) => r.dim).map((r) => `<div class="spec"><b>${r.name}</b><span>${r.dim} · ${(r.ft![0] * r.ft![1]).toFixed(0)} sq ft</span></div>`).join('')}
+      ${P.rooms.filter((r) => r.dim).map((r) => `<div class="spec"><b>${room(r.name)}</b><span>${r.dim} · ${(r.ft![0] * r.ft![1]).toFixed(0)} sq ft</span></div>`).join('')}
       <div class="spec"><b>Total</b><span><b>${u.roomArea} sq ft</b> (${u.roomAreaM2} m²) of room area</span></div>
       <p class="note">Room sizes are clear internal dimensions printed in the brochure. RERA carpet / super built-up area as per the developer’s agreement.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn primary" id="p3d">${icon('cube')}${t('interior3d')}</button><button class="btn" id="pBal">${icon('eye')}${t('balconyView')}</button></div>
@@ -716,7 +792,7 @@ function openResidences() {
     <div class="res-filters">
       <select id="fT"><option value="all">${t('allTowers')}</option>${TOWERS.map((x) => `<option>${x}</option>`).join('')}</select>
       <select id="fY"><option value="all">${t('anyType')}</option><option value="A">Type A</option><option value="B">Type B</option><option value="C">Type C</option></select>
-      <select id="fV"><option value="all">${t('anyFacing')}</option>${tags.map((x) => `<option>${x}</option>`).join('')}</select>
+      <select id="fV"><option value="all">${t('anyFacing')}</option>${tags.map((x) => `<option value="${x}">${L(TAG3[x] || x)}</option>`).join('')}</select>
       <select id="fF"><option value="1-14">${t('floorsRange')} 1–14</option><option value="1-5">1–5</option><option value="6-10">6–10</option><option value="11-14">11–14</option></select>
       <label class="toggle" style="margin:0"><input type="checkbox" id="fA" checked>${t('onlyAvailable')}</label>
       <span class="muted" id="fCount" style="margin-left:auto;font-size:13px"></span>
@@ -732,7 +808,7 @@ function openResidences() {
       .sort((a, b) => a.tower.localeCompare(b.tower) || b.floor - a.floor || a.no.localeCompare(b.no));
     q('fCount').textContent = `${list.length} ${t('results')}`;
     document.getElementById('fBody')!.innerHTML = list.slice(0, 200).map((u) => `<tr>
-      <td><b>${u.id}</b>${shortlist.has(u.id) ? ' ♥' : ''}</td><td>${u.floor}</td><td>${u.type}</td><td class="hide-m">${u.roomArea} sq ft</td><td class="hide-m">${DIR_NAME[u.facing]} · ${u.tag}</td>
+      <td><b>${u.id}</b>${shortlist.has(u.id) ? ' ♥' : ''}</td><td>${u.floor}</td><td>${u.type}</td><td class="hide-m">${u.roomArea} sq ft</td><td class="hide-m">${L(DIR3[u.facing])} · ${L(TAG3[u.tag])}</td>
       <td><i class="dot ${u.status}"></i> ${t(u.status)}</td><td><button class="btn sm" data-u="${u.id}">${t('view')}</button></td></tr>`).join('');
     document.querySelectorAll<HTMLElement>('#fBody [data-u]').forEach((b) => (b.onclick = () => { closeModal(); if (S.mode === 'balcony' || S.mode === 'interior') closeOverlayMode(); selectUnit(b.dataset.u!); }));
   };
@@ -797,4 +873,4 @@ document.documentElement.lang = getLang();
 setHour(16.6);
 renderAll();
 world.renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); toast('Graphics paused — tap to reload'); setTimeout(() => location.reload(), 1500); });
-(window as unknown as { vp: unknown }).vp = { world, campus, S, selectUnit, openBalcony, openInterior, goCampus, setHour, selectTower, selectFloor };
+(window as unknown as { vp: unknown }).vp = { world, campus, S, droneTour, stopTour, selectUnit, openBalcony, openInterior, goCampus, setHour, selectTower, selectFloor };

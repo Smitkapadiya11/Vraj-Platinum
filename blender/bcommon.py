@@ -230,3 +230,27 @@ def proc_noise(c1, c2, scale=30.0):
         nt.links.new(nz.outputs['Fac'], ramp.inputs['Fac'])
         nt.links.new(ramp.outputs['Color'], b.inputs['Base Color'])
     return fn
+
+
+def world_uv(ob, skip=('glass',)):
+    """Box-project UVs in world metres (1 UV unit = 1 m) so tiled photo textures keep real scale.
+    Faces whose material is in `skip` keep their UVs (glass stores a per-window random in U)."""
+    me = ob.data
+    if not me.uv_layers:
+        me.uv_layers.new(name='UVMap')
+    uv = me.uv_layers.active or me.uv_layers[0]
+    names = [m.name if m else '' for m in me.materials]
+    for p in me.polygons:
+        if names[p.material_index] in skip:
+            continue
+        n = p.normal
+        ax = max(range(3), key=lambda i: abs(n[i]))
+        for li in p.loop_indices:
+            co = me.vertices[me.loops[li].vertex_index].co
+            if ax == 2:
+                u, v = co.x, co.y
+            elif ax == 0:
+                u, v = co.y, co.z
+            else:
+                u, v = co.x, co.z
+            uv.data[li].uv = (u, v)

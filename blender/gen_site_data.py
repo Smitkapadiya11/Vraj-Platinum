@@ -110,7 +110,7 @@ site = dict(
     centralPlanter=rect(630, 660, 1055, 1305),
     gate=dict(x=E(1435), y=N(645), width=9.0),
     blocks=blocks,
-    planterFloors=[3, 7, 11],
+    planterFloors=[5, 10],
 )
 json.dump(site, open(os.path.join(ROOT, 'src', 'data', 'site.json'), 'w'), indent=1)
 print('flats/floor', sum(len(b['flats']) for b in blocks), 'total', sum(len(b['flats']) for b in blocks) * FLOORS)

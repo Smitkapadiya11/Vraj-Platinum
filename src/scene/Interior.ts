@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import gsap from 'gsap';
 import { loader } from './Campus';
 import { PLANS } from '../data/project';
+import { room } from '../data/i18nContent';
 import type { World } from './World';
 import { IS_MOBILE } from './World';
 
@@ -95,7 +96,7 @@ export class Interior {
       const x = ((r.r[0] + r.r[2]) / 2 - CX) * P.mpp, z = ((r.r[1] + r.r[3]) / 2 - CY) * P.mpp;
       const el = document.createElement('button');
       el.className = 'room-label';
-      el.innerHTML = `<b>${r.name}</b><span>${r.dim}</span>`;
+      el.innerHTML = `<b>${room(r.name)}</b><span>${r.dim}</span>`;
       el.onclick = () => this.focusRoom(r.id);
       this.labelLayer.appendChild(el);
       this.labels.push({ el, pos: new THREE.Vector3(x, 1.0, z), room: r.id });

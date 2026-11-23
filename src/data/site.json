@@ -3,10 +3,10 @@
  "geo": {
   "lat": 21.2318382,
   "lng": 72.9136999,
-  "rotationDeg": 0,
-  "note": "Google Maps pin sits at the gate on the 100 ft road; the plot centre (model origin) is ~43 m west of it (verified on Esri imagery).",
   "originLat": 21.2318382,
-  "originLng": 72.913286
+  "originLng": 72.913286,
+  "rotationDeg": 0,
+  "note": "Google Maps pin sits at the gate on the 100 ft road; the plot centre (model origin) is ~43 m west of it (verified on Esri imagery)."
  },
  "groundH": 3.6,
  "floorH": 3.0,
@@ -665,8 +665,7 @@
   }
  ],
  "planterFloors": [
-  3,
-  7,
-  11
+  5,
+  10
  ]
 }

@@ -27,12 +27,17 @@ M = dict(
     wallw=mat('wallw', '#E6E2DA', 0.85),
     stone=mat('stone', '#BBAA8E', 0.8, fn=proc_noise('#B2A184', '#C8B89D', 12)),
     wood=mat('wood', '#A87A4E', 0.6, fn=proc_wood('#99693F', '#BC8E5F', 4, 'Y')),
-    gold=mat('gold', '#D2A858', 0.3, 0.9, emit='#F3C46E', emit_strength=0.4),
+    gold=mat('gold', '#9C7550', 0.35, 0.85, emit='#F3C46E', emit_strength=0.4),
+    bronze=mat('bronze', '#9A7754', 0.45, 0.6),
+    steel=mat('steel', '#7F848A', 0.4, 0.8),
+    blacksteel=mat('blacksteel', '#1C1D20', 0.5, 0.6),
+    screen=mat('screen', '#202124', 0.6, 0.4),
+    cordyline=mat('cordyline', '#5A1E2A', 0.8),
     water=mat('water', '#2E6F86', 0.05, 0.3),
     rubber=mat('rubber', '#C4543C', 0.9),
     rubber2=mat('rubber2', '#3B7F9C', 0.9),
     play_y=mat('playy', '#E9B63B', 0.5),
-    charcoal=mat('charcoal', '#45484D', 0.8),
+    charcoal=mat('charcoal', '#4E5055', 0.85),
     white=mat('white', '#F2F1ED', 0.7),
     mark=mat('mark', '#F1F1EC', 0.6),
     yellow=mat('yellowmark', '#E2B23A', 0.6),
@@ -88,13 +93,34 @@ for (y0, y1, sgn) in ((py0, gy - gw / 2, -1), (gy + gw / 2, py1, 1)):
     B(px1 - 1.0, px1 - 0.4, sy0 - 0.4, sy0, 0, 3.8, M['charcoal'])
     B(px1 - 1.0, px1 - 0.4, sy1, sy1 + 0.4, 0, 3.8, M['charcoal'])
     cyy = (sy0 + sy1) / 2
-    text('VRAJ', px1 - 0.27, cyy, 1.95, 0.85, M['gold'], rot_z=math.pi / 2)
-    text('Platinum', px1 - 0.27, cyy, 1.0, 0.8, M['gold'], rot_z=math.pi / 2)
-    B(px1 - 1.6, px1 - 1.2, sy0, sy1, 0, 0.5, M['soil'])
-# guard cabin + boom barrier
-B(gx - 4.5, gx - 1.5, gy + gw / 2 + 0.5 - 9.5 + 9.5, gy + gw / 2 + 3.0, 0, 2.7, M['white'], top=M['charcoal'])
-B(gx - 4.6, gx - 1.4, gy + gw / 2 + 0.4, gy + gw / 2 + 3.1, 2.7, 2.9, M['charcoal'])
-B(gx - 0.6, gx - 0.4, gy - gw / 2 + 0.3, gy + gw / 2 - 0.3, 0.95, 1.05, M['yellow'])
+    if sgn > 0:   # bronze letters, as on site (photo 164615648)
+        text('VRAJ', px1 - 0.27, cyy, 2.05, 0.75, M['gold'], rot_z=math.pi / 2)
+        text('PLATINUM', px1 - 0.27, cyy, 1.25, 0.62, M['gold'], rot_z=math.pi / 2)
+    else:         # perforated bronze panel with logo (photo 164556602)
+        B(px1 - 0.3, px1 - 0.24, sy0 + 1.0, sy1 - 1.6, 0.55, 3.0, M['bronze'])
+    B(px1 - 1.7, px1 - 1.2, sy0, sy1, 0, 0.55, M['charcoal'], top=M['soil'])
+    for k in range(int((sy1 - sy0) / 0.45)):
+        yy = sy0 + 0.25 + k * 0.45
+        sphere(f'cord{sgn}{k}', 0.32, px1 - 1.45, yy, 0.85, M['cordyline' if k % 2 else 'leaf'], sub=1, sz=1.3)
+        objs.append(bpy.data.objects[f'cord{sgn}{k}'])
+# central guard cabin between the in/out drives (photo 164552954): charcoal box, stone panel, glass slit
+B(gx - 2.4, gx - 0.4, gy - 0.9, gy + 0.9, 0, 3.0, M['charcoal'], top=M['charcoal'])
+B(gx - 0.42, gx - 0.38, gy - 0.25, gy + 0.25, 0.9, 2.6, M['glass'])
+B(gx - 2.42, gx - 0.38, gy - 0.95, gy - 0.9, 0.3, 2.4, M['stone'])
+B(gx - 2.6, gx - 0.2, gy - 1.1, gy + 1.1, 3.0, 3.15, M['charcoal'])
+B(gx - 2.4, gx - 0.4, gy - 1.3, gy + 1.3, 0, 0.35, M['charcoal'], top=M['soil'])
+# wooden slat sliding gates (open, parked beside each drive)
+for side in (-1, 1):
+    g0 = gy + side * (gw / 2 + 0.2)
+    g1 = g0 + side * 4.2
+    a, b_ = min(g0, g1), max(g0, g1)
+    B(px1 - 0.7, px1 - 0.62, a, b_, 0.1, 0.16, M['steel'])
+    B(px1 - 0.7, px1 - 0.62, a, b_, 2.3, 2.36, M['steel'])
+    k = a + 0.1
+    while k < b_ - 0.1:
+        B(px1 - 0.72, px1 - 0.6, k, k + 0.16, 0.12, 2.36, M['wood'])
+        B(px1 - 0.69, px1 - 0.63, k + 0.2, k + 0.23, 0.12, 2.36, M['steel'])
+        k += 0.42
 # road (30 m) with footpaths, median and markings
 rx0, rx1 = site['road']['rect'][0], site['road']['rect'][1]
 ry0, ry1 = -260, 260
@@ -113,19 +139,22 @@ for e in (rx0 + 2.9, rx1 - 2.9, mx - 1.3, mx + 1.3):
     B(e - 0.07, e + 0.07, ry0, ry1, 0.02, 0.026, M['mark'])
 # garden
 gx0, gx1, gy0, gy1 = site['garden']
-B(gx0 - 0.6, gx1 + 0.6, gy0 - 0.6, gy1 + 0.6, 0.0, 0.18, M['kerb'])
-stripe = 2.4
-x = gx0
-i = 0
-while x < gx1:
-    B(x, min(gx1, x + stripe), gy0, gy1, 0.0, 0.2, M['lawn' if i % 2 else 'lawn2'])
-    x += stripe
-    i += 1
-for side in (gy0 + 0.6, gy1 - 0.6):
-    for k in range(int((gx1 - gx0) / 1.3)):
-        xx = gx0 + 0.6 + k * 1.3
-        sphere(f'hedge{side}{k}', 0.55, xx, side, 0.55, M['hedge'], sub=2, sz=0.75)
+# lawn with black granite edge and low planting (photos 163134291, 163845322)
+B(gx0 - 0.35, gx1 + 0.35, gy0 - 0.35, gy1 + 0.35, 0.0, 0.32, M['charcoal'])
+B(gx0, gx1, gy0, gy1, 0.0, 0.34, M['lawn'])
+for side in (gy0 + 0.3, gy1 - 0.3):
+    for k in range(int((gx1 - gx0) / 0.7)):
+        xx = gx0 + 0.35 + k * 0.7
+        sphere(f'hedge{side}{k}', 0.26, xx, side, 0.42, M['hedge' if k % 3 else 'cordyline'], sub=1, sz=0.8)
         objs.append(bpy.data.objects[f'hedge{side}{k}'])
+# black steel garden portal with laser-cut screen (photo 163757637 / 163823613)
+pgx = gx1 + 1.2
+for yy in (gy0 + 0.6, gy1 - 0.6):
+    B(pgx - 0.12, pgx + 0.12, yy - 0.12, yy + 0.12, 0, 4.6, M['blacksteel'])
+B(pgx - 0.15, pgx + 0.15, gy0 + 0.4, gy1 - 0.4, 4.4, 4.7, M['blacksteel'])
+B(pgx - 0.03, pgx + 0.03, gy0 + 0.6, gy1 - 0.6, 3.3, 4.4, M['screen'])
+for yy in (gy0 + 0.6, gy1 - 0.6):
+    B(pgx - 1.6, pgx + 0.12, yy - 0.08, yy + 0.08, 4.5, 4.62, M['blacksteel'])
 # play area (west end)
 ax0, ax1, ay0, ay1 = site['playArea']
 B(ax0, ax1, ay0, ay1, 0.0, 0.22, M['rubber'])
@@ -157,13 +186,7 @@ B(gzx - 2.0, gzx + 2.1, gzy + 1.4, gzy + 1.6, 2.6, 2.8, M['wood'])
 # central planter between towers A & B
 cx0, cx1, cy0, cy1 = site['centralPlanter']
 B(cx0, cx1, cy0, cy1, 0, 0.5, M['stone'], top=M['soil'])
-# creeper pergola linking towers A and B over the entrance drive (as in the night render)
-for xx in (33.8, 35.4):
-    B(xx, xx + 0.3, -5.7, 5.8, 5.4, 5.8, M['charcoal'])
-for k in range(int(11.5 / 0.25)):
-    yy = -5.6 + k * 0.25
-    ln = 0.6 + random.random() * 1.6
-    B(33.9 + random.random() * 1.4, 34.1 + random.random() * 1.4, yy, yy + 0.18, 5.4 - ln, 5.9, M['leaf'])
+
 
 # ---------------------------------------------------------------- props
 props = dict(palm=[], tree=[], car=[], lamp=[], bench=[], shrub=[])
@@ -227,6 +250,7 @@ props = {k: [p for p in v if p] for k, v in props.items()}
 json.dump(props, open(os.path.join(ROOT, 'src', 'data', 'props.json'), 'w'))
 
 site_obj = join(objs, 'campus')
+world_uv(site_obj)
 export_glb(os.path.join(OUT, 'site.glb'), [site_obj])
 
 # ---- prop meshes (each centred at origin) ----

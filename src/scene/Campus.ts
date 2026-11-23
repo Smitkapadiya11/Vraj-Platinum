@@ -3,6 +3,30 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
 import { SITE, PROPS, type BlockDef, type FlatDef } from '../data/project';
 import { UNITS, type Unit, DIR_VEC } from '../data/units';
+import BALCONIES from '../data/balconies.json';
+import { sunPosition, istDate } from './sun';
+
+// photo-derived tileable textures (public/tex, built by scripts/make_textures.py); size = metres per tile
+const TEX: Record<string, { f: string; m: number; bump?: number }> = {
+  plaster: { f: 'white', m: 1.5, bump: 0.6 }, white: { f: 'white', m: 1.5, bump: 0.6 }, wallw: { f: 'white', m: 1.5, bump: 0.6 },
+  charcoal: { f: 'charcoal', m: 1.5, bump: 0.9 }, lightgrey: { f: 'lightgrey', m: 1.5, bump: 0.6 },
+  wood: { f: 'wood', m: 1.2 }, rust: { f: 'wood', m: 1.2 }, stone: { f: 'stone', m: 1.8 }, bronze: { f: 'bronze', m: 1.5 },
+  paver: { f: 'paver', m: 1.6 }, footpath: { f: 'paver', m: 1.2 }, lawn: { f: 'lawn', m: 4 }, asphalt: { f: 'asphalt', m: 6 },
+};
+const texLoader = new THREE.TextureLoader();
+const texCache = new Map<string, THREE.Texture>();
+function tex(f: string, m: number, anis: number) {
+  const k = f + m;
+  if (!texCache.has(k)) {
+    const t = texLoader.load(`/tex/${f}.jpg`);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping;
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.repeat.set(1 / m, 1 / m);
+    t.anisotropy = anis;
+    texCache.set(k, t);
+  }
+  return texCache.get(k)!;
+}
 import type { World } from './World';
 
 export const loader = new GLTFLoader();
@@ -51,6 +75,14 @@ export class Campus {
 
   private tuneMaterial(m: THREE.MeshStandardMaterial) {
     const n = m.name;
+    const tx = TEX[n];
+    if (tx && !m.map) {
+      const anis = Math.min(8, this.world.renderer.capabilities.getMaxAnisotropy());
+      m.map = tex(tx.f, tx.m, anis);
+      if (tx.bump) { m.bumpMap = m.map; m.bumpScale = tx.bump; }
+      m.color.set(0xffffff);
+      m.needsUpdate = true;
+    }
     if (n === 'glass' || n === 'carglass') {
       m.metalness = 0.85; m.roughness = 0.06; m.envMapIntensity = 1.6;
       if (n === 'glass') this.glassMat = m;
@@ -286,14 +318,32 @@ export class Campus {
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
     const hx = (x1 - x0) / 2, hy = (y1 - y0) / 2;
     let px = cx + dx * (hx + 0.3), py = cy + dy * (hy + 0.3);
-    if (viewIdx > 0) {
-      // 'end' facade: its balcony spans 0.55L..L-0.5 along the side (see blender/towers.py)
-      if (dx !== 0) py = y0 + 0.775 * (y1 - y0) - 0.2;
-      else px = x0 + 0.775 * (x1 - x0) - 0.2;
-    }
+    // exact balcony anchor exported from blender/towers.py
+    const a = (BALCONIES as Record<string, { e: number; n: number; dir: string }[]>)[`${f.tower}-${f.no}`]?.find((q) => q.dir === v.dir);
+    if (a) { px = a.e; py = a.n; }
     const eye = GH + (u.floor - 1) * FH + 1.55;
     const pos = toV(px, py, eye);
     const look = toV(px + dx * 50, py + dy * 50, eye - 9);
     return { pos, look, dir: v.dir, label: v.label };
+  }
+
+  /** Hours of direct sun reaching a balcony on a given date (ray-tested against towers + neighbours). */
+  sunHours(u: Unit, viewIdx: number, date: Date, blockers: THREE.Object3D[]) {
+    const p = this.balconyPose(u, viewIdx);
+    const [dx, dy] = DIR_VEC[p.dir as keyof typeof DIR_VEC];
+    const out = new THREE.Vector3(dx, 0, -dy);
+    const origin = p.pos.clone().addScaledVector(out, 1.4).setY(p.pos.y - 0.4);
+    const rc = new THREE.Raycaster();
+    let hours = 0;
+    for (let h = 5.5; h <= 19; h += 0.25) {
+      const sp = sunPosition(istDate(h, date), SITE.geo.lat, SITE.geo.lng);
+      if (sp.altitude <= 0.03) continue;
+      const dir = new THREE.Vector3(Math.sin(sp.azimuth) * Math.cos(sp.altitude), Math.sin(sp.altitude), -Math.cos(sp.azimuth) * Math.cos(sp.altitude));
+      if (dir.dot(out) <= 0.05) continue;
+      rc.set(origin, dir);
+      rc.far = 600;
+      if (rc.intersectObjects(blockers, true).length === 0) hours += 0.25;
+    }
+    return hours;
   }
 }

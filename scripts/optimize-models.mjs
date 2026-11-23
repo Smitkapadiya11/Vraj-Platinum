@@ -21,7 +21,7 @@ for (const f of fs.readdirSync(src).filter((f) => f.endsWith('.glb'))) {
   await doc.transform(
     dedup(), weld(), prune(),
     textureCompress({ encoder: sharp, targetFormat: 'webp', quality: 86, resize: [2048, 2048] }),
-    reorder({ encoder: MeshoptEncoder }), quantize({ quantizePosition: 16, quantizeNormal: 10, quantizeTexcoord: 14 }),
+    reorder({ encoder: MeshoptEncoder }), quantize({ pattern: /^(POSITION|NORMAL)$/, quantizePosition: 16, quantizeNormal: 10 }),
     meshopt({ encoder: MeshoptEncoder, level: 'medium' }),
   );
   const out = path.join(dst, f);

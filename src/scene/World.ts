@@ -175,14 +175,29 @@ export class World {
     });
   }
 
+  /** Smooth camera flight. Long moves arc up and over (drone-like) instead of cutting through towers. */
   flyTo(pos: THREE.Vector3, target: THREE.Vector3, dur = 2.2, ease = 'power3.inOut') {
-    gsap.killTweensOf(this.camera.position);
-    gsap.killTweensOf(this.controls.target);
+    gsap.killTweensOf(this.flight);
+    const p0 = this.camera.position.clone(), t0 = this.controls.target.clone();
+    const dist = p0.distanceTo(pos);
+    const lift = Math.min(90, dist * 0.32);
+    const ctrl = p0.clone().lerp(pos, 0.5);
+    ctrl.y = Math.max(ctrl.y, Math.max(p0.y, pos.y) + lift * (dist > 40 ? 1 : 0.2));
+    this.flight.t = 0;
     return new Promise<void>((res) => {
-      gsap.to(this.camera.position, { x: pos.x, y: pos.y, z: pos.z, duration: dur, ease });
-      gsap.to(this.controls.target, { x: target.x, y: target.y, z: target.z, duration: dur, ease, onComplete: () => res() });
+      gsap.to(this.flight, {
+        t: 1, duration: dur, ease,
+        onUpdate: () => {
+          const k = this.flight.t, a = (1 - k) * (1 - k), b = 2 * (1 - k) * k, c = k * k;
+          this.camera.position.set(a * p0.x + b * ctrl.x + c * pos.x, a * p0.y + b * ctrl.y + c * pos.y, a * p0.z + b * ctrl.z + c * pos.z);
+          this.controls.target.lerpVectors(t0, target, k);
+        },
+        onComplete: () => res(),
+      });
     });
   }
+  flight = { t: 0 };
+  stopFlight() { gsap.killTweensOf(this.flight); }
 
   private loop = () => {
     requestAnimationFrame(this.loop);
