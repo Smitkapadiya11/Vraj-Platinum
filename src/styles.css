@@ -50,7 +50,7 @@ h1, h2, h3 { font-family: var(--serif); font-weight: 600; margin: 0; letter-spac
   transition: opacity 1s ease, visibility 1s; }
 #loader.done { opacity: 0; visibility: hidden; }
 .ld { text-align: center; width: min(420px, 84vw); }
-.ld img { width: 210px; filter: drop-shadow(0 8px 30px rgba(0,0,0,.4)); }
+.ld img { width: 230px; background: #fff; padding: 16px 22px; border-radius: 18px; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
 .ld .bar { height: 2px; background: rgba(255,255,255,.12); border-radius: 2px; margin: 26px 0 12px; overflow: hidden; }
 .ld .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--copper), #f3d2ae); transition: width .3s; }
 .ld p { margin: 0; font-size: 12.5px; letter-spacing: .08em; color: var(--muted); }

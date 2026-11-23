@@ -45,7 +45,7 @@ export class Interior {
     if (this.current) this.scene.remove(this.current);
     let obj = this.cache.get(type);
     if (!obj) {
-      const g = await loader.loadAsync(`/models/interior_${type}.glb`, (e) => e.total && onProgress?.(e.loaded / e.total));
+      const g = await loader.loadAsync(`/models/interior_${type}.glb?v=${__BUILD__}`, (e) => e.total && onProgress?.(e.loaded / e.total));
       obj = g.scene;
       obj.traverse((o) => {
         const m = o as THREE.Mesh;

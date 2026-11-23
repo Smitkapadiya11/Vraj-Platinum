@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 
 export default defineConfig({
+  define: { __BUILD__: JSON.stringify(Date.now().toString(36)) },
   build: {
     target: 'es2020',
     chunkSizeWarningLimit: 1200,

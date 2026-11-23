@@ -33,7 +33,7 @@ export class Campus {
   }
 
   async load(onProgress: (p: number) => void) {
-    const files = ['/models/towers.glb', '/models/site.glb', '/models/props.glb'];
+    const files = ['towers', 'site', 'props'].map((f) => `/models/${f}.glb?v=${__BUILD__}`);
     const done = [0, 0, 0];
     const gl = await Promise.all(files.map((f, i) => loader.loadAsync(f, (e) => {
       if (e.total) done[i] = e.loaded / e.total;
