@@ -261,3 +261,8 @@ select.lang option { color: #111; }
   #card .body .eyebrow::before { content: ''; }
 }
 @media (min-width: 861px) { #card h3 .badge { display: none; } }
+@media (max-width: 860px) {
+  .room-label { padding: 3px 6px; border-radius: 7px; }
+  .room-label b { font-size: 9.5px; }
+  .room-label span { display: none; }
+}

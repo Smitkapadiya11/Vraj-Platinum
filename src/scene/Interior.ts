@@ -124,7 +124,7 @@ export class Interior {
     const span = Math.max(size.x, size.z);
     const vf = THREE.MathUtils.degToRad(this.camera.fov) / 2;
     const eff = Math.min(1, this.camera.aspect);
-    return (span / (2 * Math.tan(vf) * eff)) * 0.76 * (this.camera.aspect < 1 ? 1.3 : 1);
+    return (span / (2 * Math.tan(vf) * eff)) * (this.camera.aspect < 1 ? 0.8 : 0.76);
   }
 
   private v = new THREE.Vector3();
