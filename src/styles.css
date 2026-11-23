@@ -260,3 +260,4 @@ select.lang option { color: #111; }
   #card .body { padding-top: 14px; }
   #card .body .eyebrow::before { content: ''; }
 }
+@media (min-width: 861px) { #card h3 .badge { display: none; } }
