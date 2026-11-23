@@ -2,13 +2,18 @@ import * as THREE from 'three';
 import { SITE } from '../data/project';
 
 /**
- * Real-location ground: streams Esri World Imagery tiles around the actual site
- * (21.2318 N, 72.9137 E) and lays them out in local metres (x = East, z = South).
- * Two rings: z18 near (~0.6 m/px) and z15 far, with a neutral fallback plane underneath.
+ * Ground around the real site (21.2318 N, 72.9133 E), local metres (x = East, z = South).
+ *
+ * Default: a vector-rendered presentation map baked by scripts/build_map.py from OpenStreetMap
+ * (© OpenStreetMap contributors) + a land-cover grid classified from satellite imagery —
+ * near tile 1.2 km (0.29 m/px desktop, 0.59 m/px mobile), far tile 4.1 km with a haze fade,
+ * on a haze-coloured base disk that the fog swallows.
+ * Optional: live Esri World Imagery satellite tiles (loaded only when the user switches to them).
  */
 const R = 6378137;
 const TILE_URL = (z: number, x: number, y: number) =>
   `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
+const HAZE = '#8f8873';
 
 function lng2tile(lng: number, z: number) { return ((lng + 180) / 360) * 2 ** z; }
 function lat2tile(lat: number, z: number) {
@@ -21,23 +26,54 @@ function tile2lat(y: number, z: number) {
   return (180 / Math.PI) * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
 }
 
+export type GroundMode = 'map' | 'sat';
+
 export class Ground {
   group = new THREE.Group();
+  mode: GroundMode = 'map';
   loaded = 0;
   failed = 0;
+  private map = new THREE.Group();
+  private sat?: THREE.Group;
   private loader = new THREE.TextureLoader();
 
-  constructor(private anisotropy: number, mobile: boolean) {
+  constructor(private anisotropy: number, private mobile: boolean) {
     this.loader.setCrossOrigin('anonymous');
     const base = new THREE.Mesh(
       new THREE.CircleGeometry(9000, 64).rotateX(-Math.PI / 2),
-      new THREE.MeshStandardMaterial({ color: 0x8a8670, roughness: 1 }),
+      new THREE.MeshStandardMaterial({ color: HAZE, roughness: 1, metalness: 0 }),
     );
-    base.position.y = -0.6;
+    base.position.y = -0.7;
     base.receiveShadow = true;
-    this.group.add(base);
-    this.ring(15, mobile ? 2 : 3, -0.4);
-    this.ring(18, mobile ? 3 : 4, -0.15);
+    this.group.add(base, this.map);
+    this.tile(`/map/far_2k.webp?v=${__BUILD__}`, 4096, -0.45, false);
+    this.tile(`/map/${mobile ? 'near_2k' : 'near_4k'}.webp?v=${__BUILD__}`, 1200, -0.15, true);
+  }
+
+  private tile(url: string, size: number, y: number, shadows: boolean) {
+    const mat = new THREE.MeshStandardMaterial({ color: HAZE, roughness: 1, metalness: 0 });
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(size, size).rotateX(-Math.PI / 2), mat);
+    m.position.y = y;
+    m.receiveShadow = shadows;
+    this.map.add(m);
+    this.loader.load(url, (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = this.anisotropy;
+      mat.map = tex; mat.color.set(0xffffff); mat.needsUpdate = true;
+      this.loaded++;
+    }, undefined, () => { this.failed++; });
+  }
+
+  setMode(mode: GroundMode) {
+    this.mode = mode;
+    if (mode === 'sat' && !this.sat) {
+      this.sat = new THREE.Group();
+      this.ring(15, this.mobile ? 2 : 3, -0.12);
+      this.ring(18, this.mobile ? 3 : 4, -0.1);
+      this.group.add(this.sat);
+    }
+    this.map.visible = mode === 'map';
+    if (this.sat) this.sat.visible = mode === 'sat';
   }
 
   private ring(z: number, rad: number, y: number) {
@@ -56,16 +92,13 @@ export class Ground {
         const w = b.x - a.x, h = b.z - a.z;
         const mat = new THREE.MeshStandardMaterial({ color: 0x9a9480, roughness: 1, metalness: 0 });
         const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h).rotateX(-Math.PI / 2), mat);
-        m.position.set(a.x + w / 2, y, a.z + h / 2);
+        m.position.set(a.x + w / 2, y - (z === 15 ? 0.02 : 0), a.z + h / 2);
         m.receiveShadow = true;
-        this.group.add(m);
+        this.sat!.add(m);
         this.loader.load(TILE_URL(z, tx, ty), (tex) => {
           tex.colorSpace = THREE.SRGBColorSpace;
           tex.anisotropy = this.anisotropy;
-          mat.map = tex;
-          mat.color.set(0xffffff);
-          mat.needsUpdate = true;
-          this.loaded++;
+          mat.map = tex; mat.color.set(0xffffff); mat.needsUpdate = true;
         }, undefined, () => { this.failed++; });
       }
     }

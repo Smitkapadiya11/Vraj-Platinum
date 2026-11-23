@@ -5,6 +5,7 @@ import { World, IS_MOBILE } from './scene/World';
 import { Campus, toV, STATUS_COLOR } from './scene/Campus';
 import { Ground } from './scene/Ground';
 import { Context } from './scene/Context';
+import { Trees } from './scene/Trees';
 import { Interior } from './scene/Interior';
 import { BalconyView } from './scene/BalconyView';
 import { RealView } from './scene/RealView';
@@ -24,6 +25,8 @@ const ground = new Ground(world.renderer.capabilities.getMaxAnisotropy(), IS_MOB
 world.scene.add(ground.group);
 const context = new Context();
 world.scene.add(context.group);
+const trees = new Trees(IS_MOBILE);
+world.scene.add(trees.group);
 const interior = new Interior(world, $('#roomLabels'));
 const balcony = new BalconyView(world);
 const realView = new RealView(world);
@@ -114,6 +117,7 @@ function renderDock() {
       <input id="hour" type="range" min="5.5" max="20.5" step="0.05" value="${world.hour}" aria-label="${t('timeOfDay')}"><b id="hourTxt">${fmtHour(world.hour)}</b></div>
     <div class="sep"></div>
     <button class="btn sm" id="dayNight">${world.night > 0.5 ? icon('sun') + t('day') : icon('moon') + t('night')}</button>
+    <button class="btn sm hide-m" id="mapMode">${ground.mode === 'map' ? '🛰 ' + t('satView') : '🗺 ' + t('mapView')}</button>
     <button class="btn sm" id="tourBtn">${touring ? '■ ' + t('stopTour') : '▶ ' + t('droneTour')}</button>
     <button class="btn icon sm hide-m" id="zIn" title="Zoom in">+</button>
     <button class="btn icon sm hide-m" id="zOut" title="Zoom out">−</button>
@@ -127,6 +131,7 @@ function renderDock() {
     gsap.to(cam.position, { x: c.target.x + off.x, y: c.target.y + off.y, z: c.target.z + off.z, duration: 0.6, ease: 'power2.out' });
   };
   $('#tourBtn').onclick = () => droneTour();
+  $('#mapMode').onclick = () => { ground.setMode(ground.mode === 'map' ? 'sat' : 'map'); renderDock(); };
   $('#zIn').onclick = () => dolly(0.75);
   $('#zOut').onclick = () => dolly(1.33);
   (d.querySelector('.compass') as HTMLElement).onclick = () => {
@@ -918,4 +923,4 @@ document.documentElement.lang = getLang();
 setHour(16.6);
 renderAll();
 world.renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); toast('Graphics paused — tap to reload'); setTimeout(() => location.reload(), 1500); });
-(window as unknown as { vp: unknown }).vp = { world, campus, S, droneTour, stopTour, selectUnit, openBalcony, openInterior, goCampus, setHour, selectTower, selectFloor };
+(window as unknown as { vp: unknown }).vp = { world, campus, ground, context, trees, S, droneTour, stopTour, selectUnit, openBalcony, openInterior, goCampus, setHour, selectTower, selectFloor };

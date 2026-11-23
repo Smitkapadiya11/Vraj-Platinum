@@ -101,6 +101,8 @@ const D = {
   gardenLevel: ['garden level', 'ગાર્ડન લેવલ', 'गार्डन लेवल'],
   movePhone: ['Move phone to look', 'જોવા માટે ફોન ફેરવો', 'देखने के लिए फ़ोन घुमाएँ'],
   gyroNo: ['Motion sensor not available', 'મોશન સેન્સર ઉપલબ્ધ નથી', 'मोशन सेंसर उपलब्ध नहीं'],
+  satView: ['Satellite', 'સેટેલાઇટ', 'सैटेलाइट'],
+  mapView: ['Map', 'નકશો', 'नक्शा'],
   playClip: ['Play real video clip', 'વાસ્તવિક વીડિયો જુઓ', 'असली वीडियो देखें'],
   actualPhotos: ['Actual sample-flat walkthrough', 'વાસ્તવિક સેમ્પલ ફ્લેટ', 'वास्तविक सैंपल फ्लैट'],
 };
