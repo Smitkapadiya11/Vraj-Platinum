@@ -18,6 +18,7 @@ def hex2lin(h):
 
 
 _mats = {}
+PROCEDURAL = True  # False for realtime (glTF) exports: procedural nodes don't survive glTF
 
 
 def mat(name, color='#cccccc', rough=0.6, metal=0.0, emit=None, emit_strength=0.0, alpha=1.0, fn=None):
@@ -36,7 +37,7 @@ def mat(name, color='#cccccc', rough=0.6, metal=0.0, emit=None, emit_strength=0.
         b.inputs['Emission Strength'].default_value = emit_strength
     if alpha < 1:
         b.inputs['Alpha'].default_value = alpha
-    if fn:
+    if fn and PROCEDURAL:
         fn(nt, b)
     m['hex'] = color
     m['rough'] = rough

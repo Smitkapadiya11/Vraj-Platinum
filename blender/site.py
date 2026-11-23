@@ -9,6 +9,8 @@ import sys, os, json, math, random
 import bpy, bmesh
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from bcommon import *
+import bcommon
+bcommon.PROCEDURAL = False
 
 random.seed(5)
 site = json.load(open(os.path.join(ROOT, 'src', 'data', 'site.json')))
