@@ -368,3 +368,7 @@ body.touring #ctx, body.touring #card, body.touring .labels, body.touring #dock,
 @media (max-width: 860px) and (max-height: 700px) {
   #ctx .stat-row, #ctx .legend { display: none; }
 }
+#hint { opacity: 0; }
+#hint:empty { display: none; }
+.btn.exitb { background: #f4f1ec; color: #111; border-color: transparent; }
+@media (max-width: 860px) { body.bal #hint { top: auto; bottom: calc(140px + var(--safe-b)); } }

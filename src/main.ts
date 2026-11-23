@@ -384,12 +384,13 @@ function closeOverlayMode() {
 
 function renderHud(type?: string) {
   const h = $('#hud'), chips = $('#chips');
+  document.body.classList.toggle('bal', S.mode === 'balcony');
   if (S.mode === 'balcony') {
     h.classList.remove('hidden');
     chips.classList.toggle('hidden', !IS_MOBILE || !realView.active);
     h.innerHTML = `<div><div class="eyebrow">📷 ${t('balcony14')}</div><h3>${t('balconyAB')}</h3>
       <small>${t('balconyNote')}</small></div>
-      <button class="btn sm" id="hudX" aria-label="${t('exitView')}">✕ <span class="hide-m">${t('exitView')}</span></button>`;
+      <button class="btn sm exitb" id="hudX" aria-label="${t('exitView')}">✕ ${t('close')}</button>`;
     chips.innerHTML = `<button class="chip" id="gyro">📱 ${t('movePhone')}</button>`;
     const gy = document.getElementById('gyro');
     if (gy) gy.onclick = async () => { const ok = await realView.enableGyro(); gy.classList.toggle('on', ok); toast(ok ? t('movePhone') : t('gyroNo')); };
@@ -403,7 +404,7 @@ function renderHud(type?: string) {
     chips.classList.remove('hidden');
     h.innerHTML = `<div><div class="eyebrow">${t('interior3d')} · ${P.label}</div><h3>2 BHK · ${Math.round(P.rooms.reduce((s, r) => s + (r.ft ? r.ft[0] * r.ft[1] : 0), 0))} sq ft</h3>
       <small>Furnished in the palette of the actual Vraj Platinum sample flat</small></div>
-      <button class="btn sm" id="hudX">✕ <span class="hide-m">${t('close')}</span></button>`;
+      <button class="btn sm exitb" id="hudX">✕ ${t('close')}</button>`;
     chips.innerHTML = `<button class="chip on" id="ov">${t('overview')}</button>` + P.rooms.filter((r) => r.dim).map((r) => `<button class="chip" data-r="${r.id}">${room(r.name)}</button>`).join('');
     chips.querySelectorAll<HTMLElement>('[data-r]').forEach((b) => (b.onclick = () => {
       chips.querySelectorAll('.chip').forEach((x) => x.classList.remove('on'));
