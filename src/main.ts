@@ -7,13 +7,12 @@ import { Ground } from './scene/Ground';
 import { Context } from './scene/Context';
 import { Trees } from './scene/Trees';
 import { Interior } from './scene/Interior';
-import { BalconyView } from './scene/BalconyView';
 import { RealView } from './scene/RealView';
 import { SITE, PROJECT, PLANS, GALLERY, SAMPLE_FLAT, PLAN_IMG } from './data/project';
 import { UNITS, UNIT_BY_ID, TOWERS, DIR_NAME, unitsOf, type Unit } from './data/units';
 import { t, setLang, getLang, onLang, type Lang } from './ui/i18n';
-import { L, DIR3, TAG3, VIEW3, room, ABOUT, HIGHLIGHTS3, AMENITIES3, SPECS_EXT3, SPECS_INT3, NEARBY3, TOUR3 } from './data/i18nContent';
-import { SITE_PHOTOS, SET_INFO, photoSrc, photosForView, realViewsFor, type SitePhoto } from './data/sitePhotos';
+import { L, DIR3, TAG3, room, ABOUT, HIGHLIGHTS3, AMENITIES3, SPECS_EXT3, SPECS_INT3, NEARBY3, TOUR3 } from './data/i18nContent';
+import { SITE_PHOTOS, SET_INFO, photoSrc, type SitePhoto } from './data/sitePhotos';
 import { icon } from './ui/icons';
 
 // ------------------------------------------------------------------ setup
@@ -28,11 +27,10 @@ world.scene.add(context.group);
 const trees = new Trees(IS_MOBILE);
 world.scene.add(trees.group);
 const interior = new Interior(world, $('#roomLabels'));
-const balcony = new BalconyView(world);
 const realView = new RealView(world);
 
 type Mode = 'campus' | 'tower' | 'unit' | 'balcony' | 'interior';
-const S = { real: true, realIdx: 0, mode: 'campus' as Mode, tower: null as string | null, floor: null as number | null, unit: null as string | null, view: 0, hover: null as string | null };
+const S = { mode: 'campus' as Mode, tower: null as string | null, floor: null as number | null, unit: null as string | null, view: 0, hover: null as string | null };
 const shortlist = new Set<string>(JSON.parse(safeGet('vp-short') || '[]'));
 function safeGet(k: string) { try { return localStorage.getItem(k); } catch { return null; } }
 function safeSet(k: string, v: string) { try { localStorage.setItem(k, v); } catch { /* ignore */ } }
@@ -73,82 +71,52 @@ async function enter(fromHash: boolean) {
   $('#loader').classList.add('done');
   if (fromHash) { route(); return; }
   await world.flyTo(CAMPUS_POS, CAMPUS_TARGET, 3.6, 'power2.inOut');
-  hint(t('tapTower'));
+  if (!safeGet('vp-guided')) showGuide(); else hint(t('tapTower'));
 }
 
-// ------------------------------------------------------------------ chrome
-function renderNav() {
-  const items: [string, string, () => void][] = [
-    ['explore', t('explore'), () => goCampus()],
-    ['res', t('residences'), () => openResidences()],
-    ['sample', t('sampleFlat'), () => openSampleFlat()],
-    ['gallery', t('gallery'), () => openGallery()],
-    ['loc', t('location'), () => openLocation()],
-    ['specs', t('specs'), () => openSpecs()],
+// ------------------------------------------------------------------ chrome (mobile-first: one bottom tab bar)
+function activeTab() {
+  if (touring) return 'drone';
+  if (S.mode === 'balcony') return 'balcony';
+  if ($('#modal').classList.contains('on')) return modalTab;
+  return 'explore';
+}
+let modalTab = '';
+function renderTabs() {
+  const tabs: [string, string, string, () => void][] = [
+    ['explore', 'cube', t('tabExplore'), () => { closeModal(); stopTour(); goCampus(); }],
+    ['drone', 'drone', t('tabDrone'), () => { closeModal(); droneTour(); }],
+    ['balcony', 'eye', t('tabBalcony'), () => { closeModal(); openBalconyView(); }],
+    ['homes', 'home', t('tabHomes'), () => { stopTour(); openResidences(); }],
+    ['more', 'menu', t('tabMore'), () => { stopTour(); openMore(); }],
   ];
-  const nav = $('#nav');
-  nav.innerHTML = '';
-  for (const [, label, fn] of items) {
-    const b = document.createElement('button');
-    b.textContent = label;
-    b.onclick = () => { nav.classList.remove('open'); fn(); };
-    nav.appendChild(b);
-  }
-  const enq = document.createElement('button');
-  enq.textContent = t('enquire');
-  enq.className = 'only-m';
-  enq.onclick = () => { nav.classList.remove('open'); openEnquiry(); };
-  if (IS_MOBILE) nav.appendChild(enq);
-  $('#enqTop').textContent = t('enquire');
+  const el = $('#tabs');
+  const on = activeTab();
+  el.innerHTML = tabs.map(([k, ic, lb]) => `<button data-k="${k}" class="${k === on ? 'on' : ''}">${icon(ic)}<span>${lb}</span></button>`).join('');
+  el.querySelectorAll<HTMLElement>('button').forEach((b, i) => (b.onclick = tabs[i][3]));
+  $('#enqTop').innerHTML = `${icon('wa')}<span>${t('enquire')}</span>`;
+  $('#tourSkip').textContent = '■ ' + t('stopTour');
 }
 $('#enqTop').onclick = () => openEnquiry();
-$('#menuBtn').onclick = () => $('#nav').classList.toggle('open');
 const langSel = $<HTMLSelectElement>('#lang');
 langSel.value = getLang();
 langSel.onchange = () => setLang(langSel.value as Lang);
 onLang(() => { renderAll(); });
 
+// two small floating controls: day/night and reset
 function renderDock() {
   const d = $('#dock');
-  d.innerHTML = `
-    <div class="compass" title="North"><i></i><b id="cmpN">N</b></div>
-    <div class="sep"></div>
-    <div class="time" title="${t('timeOfDay')}">${icon(world.night > 0.5 ? 'moon' : 'sun')}<span class="lbl">${t('timeOfDay')}</span>
-      <input id="hour" type="range" min="5.5" max="20.5" step="0.05" value="${world.hour}" aria-label="${t('timeOfDay')}"><b id="hourTxt">${fmtHour(world.hour)}</b></div>
-    <div class="sep"></div>
-    <button class="btn sm" id="dayNight">${world.night > 0.5 ? icon('sun') + t('day') : icon('moon') + t('night')}</button>
-    <button class="btn sm hide-m" id="mapMode">${ground.mode === 'map' ? '🛰 ' + t('satView') : '🗺 ' + t('mapView')}</button>
-    <button class="btn sm" id="tourBtn">${touring ? '■ ' + t('stopTour') : '▶ ' + t('droneTour')}</button>
-    <button class="btn icon sm hide-m" id="zIn" title="Zoom in">+</button>
-    <button class="btn icon sm hide-m" id="zOut" title="Zoom out">−</button>
-    <button class="btn icon sm" id="resetCam" title="Reset view">${icon('reset')}</button>`;
-  const dolly = (k: number) => {
-    if (S.mode === 'balcony' || S.mode === 'interior') return;
-    const c = world.controls, cam = world.camera;
-    const off = cam.position.clone().sub(c.target).multiplyScalar(k);
-    const len = THREE.MathUtils.clamp(off.length(), c.minDistance, c.maxDistance);
-    off.setLength(len);
-    gsap.to(cam.position, { x: c.target.x + off.x, y: c.target.y + off.y, z: c.target.z + off.z, duration: 0.6, ease: 'power2.out' });
-  };
-  $('#tourBtn').onclick = () => droneTour();
-  $('#mapMode').onclick = () => { ground.setMode(ground.mode === 'map' ? 'sat' : 'map'); renderDock(); };
-  $('#zIn').onclick = () => dolly(0.75);
-  $('#zOut').onclick = () => dolly(1.33);
-  (d.querySelector('.compass') as HTMLElement).onclick = () => {
-    if (S.mode === 'balcony' || S.mode === 'interior') return;
-    const c = world.controls, cam = world.camera;
-    const off = cam.position.clone().sub(c.target);
-    const h = Math.hypot(off.x, off.z);
-    gsap.to(cam.position, { x: c.target.x, z: c.target.z + h, duration: 1, ease: 'power2.inOut' });
-  };
-  const hr = $<HTMLInputElement>('#hour');
-  hr.oninput = () => setHour(+hr.value);
+  d.innerHTML = `<button class="fab" id="dayNight" title="${t('dayNight')}" aria-label="${t('dayNight')}">${icon(world.night > 0.5 ? 'sun' : 'moon')}</button>
+    <button class="fab" id="resetCam" title="${t('reset')}" aria-label="${t('reset')}">${icon('reset')}</button>
+    <button class="fab" id="helpBtn" title="${t('howTo')}" aria-label="${t('howTo')}">${icon('help')}</button>`;
   $('#dayNight').onclick = () => {
     const target = world.night > 0.5 ? 10 : 19.6;
     const o = { h: world.hour };
     gsap.to(o, { h: target, duration: 1.8, ease: 'power2.inOut', onUpdate: () => setHour(o.h, false), onComplete: () => renderDock() });
   };
-  $('#resetCam').onclick = () => { if (S.mode === 'interior') interior.overview(); else if (S.mode === 'balcony') balcony.enter(campus.balconyPose(UNIT_BY_ID.get(S.unit!)!, S.view).pos, campus.balconyPose(UNIT_BY_ID.get(S.unit!)!, S.view).look); else goCampus(); };
+  $('#resetCam').onclick = () => { stopTour(); if (S.mode === 'interior') interior.overview(); else if (S.mode === 'balcony') closeOverlayMode(); else goCampus(); };
+  $('#helpBtn').onclick = () => showGuide();
+  d.classList.toggle('hidden', S.mode === 'balcony');
 }
 function setHour(h: number, rerender = true) {
   world.setHour(h);
@@ -198,19 +166,11 @@ function renderCtx() {
       <div class="muted sub-m" style="font-size:13px">${PROJECT.subline} · Sarthana, Surat</div>
       <div class="stat-row"><span><b>6</b> towers</span><span><b>G+14</b></span><span><b>336</b> homes</span><span><b>${av}</b> ${t('available').toLowerCase()}</span></div>
       <div id="ctx-body">
+        <div class="eyebrow step-l" style="margin-top:12px">${t('chooseTower')}</div>
         <div class="tower-grid">${TOWERS.map((tw) => { const i = towerInfo(tw); return `<button class="tower-card" data-t="${tw}"><b>${tw}</b><span>Type ${i.types}</span><br><span><span class="dot available"></span> ${i.avail}/${i.total}</span></button>`; }).join('')}</div>
         <div class="legend"><span><i class="dot available"></i>${t('available')}</span><span><i class="dot hold"></i>${t('hold')}</span><span><i class="dot sold"></i>${t('sold')}</span>${PROJECT.commercial.demoInventory ? '<span style="opacity:.7">· demo availability</span>' : ''}</div>
-        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap">
-          <button class="btn sm primary" id="tourCtx">▶ ${t('droneTour')}</button>
-          <button class="btn sm" id="findBtn">${t('filters')}</button>
-          <button class="btn sm" id="sfBtn">${t('sampleFlat')}</button>
-          <a class="btn sm" href="${PROJECT.brochure}" target="_blank" rel="noopener">${t('brochure')} ↗</a>
-        </div>
       </div>`;
     c.querySelectorAll<HTMLElement>('.tower-card').forEach((b) => (b.onclick = () => selectTower(b.dataset.t!)));
-    $('#findBtn').onclick = () => openResidences();
-    $('#tourCtx').onclick = () => droneTour();
-    $('#sfBtn').onclick = () => openSampleFlat();
     return;
   }
   const tw = S.tower;
@@ -221,14 +181,14 @@ function renderCtx() {
     <h2>${t('tower')} ${tw}</h2>
     <div class="stat-row"><span><b>G+14</b></span><span>Type <b>${i.types}</b></span><span><b>${i.avail}</b>/${i.total} ${t('available').toLowerCase()}</span></div>
     <div id="ctx-body">
-    ${S.floor ? `<div class="eyebrow" style="margin-top:12px">${t('units')} · ${t('floor')} ${S.floor}</div>
+    ${S.floor ? `<div class="eyebrow step-l" style="margin-top:12px">${t('chooseFlat')} · ${t('floor')} ${S.floor}</div>
       <div class="unit-list">${unitsOf(tw, S.floor).map((u) => `
         <button class="unit-item ${u.id === S.unit ? 'on' : ''}" data-u="${u.id}">
           <i class="dot ${u.status}"></i>
           <div><b>${u.id}</b><small>Type ${u.type} · ${u.roomArea} sq ft · ${L(DIR3[u.facing])} · ${L(TAG3[u.tag])}</small></div>
           <span class="muted" style="font-size:12px">${t(u.status)}</span>
         </button>`).join('')}</div>` : ''}
-    <div class="eyebrow" style="margin-top:16px">${t('floor')}</div>
+    <div class="eyebrow step-l" style="margin-top:16px">${S.floor ? t('floor') : t('chooseFloor')}</div>
     <div class="floor-list">${floors.map((f) => `<button class="floor-row ${f === S.floor ? 'on' : ''}" data-f="${f}"><span class="n">${f}</span><span class="u">${unitsOf(tw, f).map((u) => `<i style="background:${'#' + STATUS_COLOR[u.status].toString(16).padStart(6, '0')}"></i>`).join('')}</span></button>`).join('')}</div>
     <div class="legend"><span><i class="dot available"></i>${t('available')}</span><span><i class="dot hold"></i>${t('hold')}</span><span><i class="dot sold"></i>${t('sold')}</span></div>
     </div>`;
@@ -246,7 +206,6 @@ function renderCard() {
   if (!u || S.mode === 'balcony' || S.mode === 'interior') { c.classList.add('hidden'); return; }
   c.classList.remove('hidden');
   if (IS_MOBILE) $('#ctx').classList.add('hidden');
-  const isShort = shortlist.has(u.id);
   c.innerHTML = `
     <button class="x" id="cardX" aria-label="${t('close')}">×</button>
     <div class="hero" style="background-image:url(${PLAN_IMG[u.type]})"><span class="badge"><i class="dot ${u.status}"></i>${t(u.status)}</span></div>
@@ -261,32 +220,20 @@ function renderCard() {
         <div><small>${t('type')}</small><b>2 BHK · ${u.type}</b><small>${PLANS[u.type].rooms.filter((r) => r.kind === 'toilet').length} toilets${PLANS[u.type].rooms.some((r) => r.kind === 'balcony') ? ' · balcony' : ''}</small></div>
       </div>
       <div class="actions">
-        <button class="btn primary wide" id="aBal">${icon('eye')}${t('balconyView')}</button>
-        <button class="btn" id="a3d">${icon('cube')}${t('interior3d')}</button>
+        ${u.tower === 'A' || u.tower === 'B' ? `<button class="btn primary wide" id="aBal">${icon('eye')}${t('balcony14')}</button>` : ''}
         <button class="btn" id="aPlan">${icon('plan')}${t('floorPlan')}</button>
         <button class="btn" id="aCost">${icon('calc')}${t('costSheet')}</button>
-        <button class="btn" id="aShort">${icon('heart')}${isShort ? t('shortlisted') : t('shortlist')}</button>
-        <a class="btn wide" id="aWa" href="${waLink(u)}" target="_blank" rel="noopener">${icon('wa')}${t('whatsapp')}</a>
-        <button class="btn sm wide ghost" id="aShare">${icon('share')}${t('share')}</button>
+        <button class="btn" id="a3d">${icon('cube')}${t('interior3d')}</button>
+        <button class="btn" id="aShare">${icon('share')}${t('share')}</button>
+        <a class="btn wide wa" id="aWa" href="${waLink(u)}" target="_blank" rel="noopener">${icon('wa')}${t('whatsapp')}</a>
       </div>
-      <div class="sunrow" id="sunRow">${icon('sun')}<span>${t('sunToday')}…</span></div>
     </div>`;
-  setTimeout(() => {
-    const blockers = [...campus.towerPick, context.group];
-    const y = new Date().getUTCFullYear();
-    const fmt = (h: number) => (h >= 1 ? `${h.toFixed(1)} h` : h > 0 ? `${Math.round(h * 60)} min` : '—');
-    const today = campus.sunHours(u, 0, new Date(), blockers);
-    const jun = campus.sunHours(u, 0, new Date(Date.UTC(y, 5, 21)), blockers);
-    const dec = campus.sunHours(u, 0, new Date(Date.UTC(y, 11, 21)), blockers);
-    const el = document.getElementById('sunRow');
-    if (el && S.unit === u.id) el.innerHTML = `${icon('sun')}<span>${t('sunToday')}: <b>${fmt(today)}</b> ${t('hrsToday')} · ${t('june')} ${fmt(jun)} · ${t('dec')} ${fmt(dec)}</span>`;
-  }, 60);
   $('#cardX').onclick = () => { S.unit = null; S.mode = 'tower'; refreshFloor(); renderCard(); renderCtx(); syncHash(); };
-  $('#aBal').onclick = () => openBalcony(u.id, 0);
+  const ab = document.getElementById('aBal');
+  if (ab) ab.onclick = () => openBalconyView();
   $('#a3d').onclick = () => openInterior(u.type);
   $('#aPlan').onclick = () => openPlan(u);
   $('#aCost').onclick = () => openCost(u);
-  $('#aShort').onclick = () => { if (shortlist.has(u.id)) shortlist.delete(u.id); else shortlist.add(u.id); safeSet('vp-short', JSON.stringify([...shortlist])); renderCard(); };
   $('#aShare').onclick = async () => {
     const url = location.href;
     try { if (navigator.share) await navigator.share({ title: `Vraj Platinum ${u.id}`, url }); else { await navigator.clipboard.writeText(url); toast(t('copied')); } } catch { /* cancelled */ }
@@ -316,7 +263,7 @@ function towerCam(tw: string, floor?: number | null) {
 function goCampus() {
   realView.close();
   context.clear.value = 40;
-  if (S.mode === 'balcony') balcony.exit();
+  if (S.mode === 'balcony') exitBalcony();
   if (S.mode === 'interior') interior.close();
   Object.assign(S, { mode: 'campus', tower: null, floor: null, unit: null });
   campus.slice(null, null);
@@ -329,7 +276,7 @@ function selectTower(tw: string, floor: number | null = null) {
   stopTour();
   realView.close();
   context.clear.value = 40;
-  if (S.mode === 'balcony') balcony.exit();
+  if (S.mode === 'balcony') exitBalcony();
   if (S.mode === 'interior') interior.close();
   Object.assign(S, { mode: 'tower', tower: tw, floor, unit: null });
   const best = floor ?? null;
@@ -375,117 +322,80 @@ function refreshFloor() {
   campus.showFloorUnits(S.tower, S.floor, S.unit ?? undefined, S.hover ?? undefined);
 }
 
-async function openBalcony(id: string, view: number) {
+// ------------------------------------------------------------------ the one real balcony view (14th floor, Tower A/B, road side)
+const BALCONY = { src: '/site/pano/162359770.jpg', tower: 'A', floor: 14 };
+const BAL_UNIT = UNITS.find((u) => u.tower === BALCONY.tower && u.floor === BALCONY.floor && u.flat.views.some((v) => v.dir === 'E'))!;
+let balReturn: { unit: string | null; tower: string | null; floor: number | null } | null = null;
+async function openBalconyView() {
   stopTour();
-  const u = UNIT_BY_ID.get(id)!;
+  if (S.mode === 'balcony') return;
   if (S.mode === 'interior') interior.close();
-  S.unit = id; S.tower = u.tower; S.floor = u.floor; S.view = view; S.mode = 'balcony';
+  balReturn = { unit: S.unit, tower: S.tower, floor: S.floor };
+  S.mode = 'balcony';
   campus.slice(null, null);
   campus.showFloorUnits(null, null);
   renderAll();
   syncHash();
-  const pose = campus.balconyPose(u, view);
+  // drone glides up to the 14th-floor road-side balcony, then the real photo takes over
+  const vi = Math.max(0, BAL_UNIT.flat.views.findIndex((v) => v.dir === 'E'));
+  const pose = campus.balconyPose(BAL_UNIT, vi);
+  const out = pose.look.clone().sub(pose.pos).setY(0).normalize();
+  const approach = pose.pos.clone().addScaledVector(out, 26).setY(pose.pos.y + 6);
+  $('#balFade').classList.add('on');
+  await world.flyTo(approach, pose.pos, 2.0, 'power2.inOut');
+  if (S.mode !== 'balcony') { $('#balFade').classList.remove('on'); return; }
+  await world.flyTo(pose.pos, pose.look, 0.9, 'power1.in');
+  if (S.mode !== 'balcony') { $('#balFade').classList.remove('on'); return; }
+  $('#balFade').classList.add('white');
+  await new Promise((r) => setTimeout(r, 250));
+  await realView.open(BALCONY.src, 'pano');
+  $('#balFade').classList.remove('white', 'on');
+  if (S.mode !== 'balcony') { realView.close(); return; }
   renderHud();
-  context.clear.value = 0;
-  realView.close();
-  const srcs = realViewsFor(u.tower, u.floor, pose.dir as 'N' | 'S' | 'E' | 'W', u.tag.startsWith('Garden'));
-  if (S.realIdx >= srcs.length) S.realIdx = 0;
-  await balcony.enter(pose.pos, pose.look);
-  if (S.mode !== 'balcony' || S.unit !== id) return;
-  if (S.real && srcs.length && !srcs[0].nearest) await showReal();
-  else { renderHud(); hint(t('lookAround')); }
+  hint(IS_MOBILE ? `${t('lookAround')} · ${t('movePhone')}` : t('lookAround'), 4500);
 }
-async function showReal() {
-  if (S.mode !== 'balcony' || !S.unit) return;
-  const u = UNIT_BY_ID.get(S.unit)!;
-  const pose = campus.balconyPose(u, S.view);
-  const srcs = realViewsFor(u.tower, u.floor, pose.dir as 'N' | 'S' | 'E' | 'W', u.tag.startsWith('Garden'));
-  if (!srcs.length) { renderHud(); return; }
-  const cur = srcs[Math.min(S.realIdx, srcs.length - 1)];
-  await realView.open(cur.src, cur.kind);
-  renderHud();
-  hint(t('lookAround'));
+function exitBalcony() {
+  realView.close();
+  world.controls.enabled = true;
+  $('#balFade').classList.remove('white', 'on');
 }
 async function openInterior(type: 'A' | 'B' | 'C') {
   stopTour();
-  realView.close();
-  if (S.mode === 'balcony') balcony.exit();
-  const prev = S.mode;
+  if (S.mode === 'balcony') exitBalcony();
   S.mode = 'interior';
   renderAll();
   renderHud(type);
   await interior.open(type);
   if (S.mode !== 'interior') return;
   hint(t('dragHint'));
-  void prev;
 }
 function closeOverlayMode() {
-  realView.close();
-  context.clear.value = 40;
-  if (S.mode === 'balcony') balcony.exit();
+  const wasBalcony = S.mode === 'balcony';
+  if (wasBalcony) exitBalcony();
   if (S.mode === 'interior') interior.close();
+  context.clear.value = 40;
+  if (wasBalcony && balReturn) { S.unit = balReturn.unit; S.tower = balReturn.tower; S.floor = balReturn.floor; }
+  balReturn = null;
   S.mode = S.unit ? 'unit' : S.tower ? 'tower' : 'campus';
-  if (S.tower && S.floor) campus.slice(S.tower, S.floor);
-  refreshFloor();
-  if (S.mode === 'unit' && S.unit) selectUnit(S.unit);
-  renderAll();
-  syncHash();
+  if (S.mode === 'unit' && S.unit) { selectUnit(S.unit); return; }
+  if (S.mode === 'tower' && S.tower) { selectTower(S.tower, S.floor); return; }
+  goCampus();
 }
 
 function renderHud(type?: string) {
   const h = $('#hud'), chips = $('#chips');
-  if (S.mode === 'balcony' && S.unit) {
-    const u = UNIT_BY_ID.get(S.unit)!;
-    const pose = campus.balconyPose(u, S.view);
-    const srcs = realViewsFor(u.tower, u.floor, pose.dir as 'N' | 'S' | 'E' | 'W', u.tag.startsWith('Garden'));
-    const cur = srcs[Math.min(S.realIdx, srcs.length - 1)];
-    const showingReal = realView.active && !!cur;
+  if (S.mode === 'balcony') {
     h.classList.remove('hidden');
-    chips.classList.remove('hidden');
-    const diff = cur ? u.floor - cur.capFloor : 0;
-    const note = !cur ? '' : cur.nearest ? t('nearestNote')
-      : cur.capFloor === 0 ? t('groundNote')
-      : Math.abs(diff) >= 3 ? `${t('capturedOn')} ${cur.capFloor} · ${Math.abs(diff * SITE.floorH).toFixed(0)} m ${diff < 0 ? t('lowerHere') : t('higherHere')}` : t('sameHeight');
-    h.innerHTML = `<div><div class="eyebrow">${showingReal ? '📷 ' + t('realPhotoView') : t('realView')}</div><h3>${u.id} · ${L(VIEW3[pose.label] || pose.label)}</h3>
-      <small>${t('floor')} ${u.floor} · ${u.heightM.toFixed(1)} m · ${t('facing')} <span class="heading" id="hdg">${L(DIR3[pose.dir])}</span></small>
-      ${showingReal ? `<small class="capnote">${t('captured')}: ${cur.capTower === 'garden' ? t('gardenLevel') : `${t('tower')} ${cur.capTower}, ${t('floor')} ${cur.capFloor || 'G'}`} · 23 Nov 2026${note ? ' — ' + note : ''}</small>` : ''}</div>
-      <button class="btn sm" id="hudX">${t('exitView')}</button>`;
-    chips.innerHTML = (srcs.length ? `<button class="chip ${showingReal ? 'on' : ''}" id="toReal">📷 ${t('realPhotoView')}</button><button class="chip ${showingReal ? '' : 'on'}" id="to3d">3D · ${t('floor')} ${u.floor}</button>` : '') +
-      u.flat.views.map((v, i) => `<button class="chip ${i === S.view ? 'on' : ''}" data-v="${i}">${L(VIEW3[v.label] || v.label)} · ${L(DIR3[v.dir])}</button>`).join('') +
-      `<button class="chip" data-f="-1">▼ ${t('floor')}</button><button class="chip" data-f="1">▲ ${t('floor')}</button>` +
-      (IS_MOBILE && showingReal ? `<button class="chip" id="gyro">📱 ${t('movePhone')}</button>` : '') +
-      `<button class="chip" id="hud3d">${t('interior3d')}</button>`;
-    chips.querySelectorAll<HTMLElement>('[data-v]').forEach((b) => (b.onclick = () => openBalcony(u.id, +b.dataset.v!)));
-    chips.querySelectorAll<HTMLElement>('[data-f]').forEach((b) => (b.onclick = () => {
-      const nf = THREE.MathUtils.clamp(u.floor + +b.dataset.f!, 1, NF);
-      const nu = UNITS.find((x) => x.tower === u.tower && x.no === u.no && x.floor === nf)!;
-      openBalcony(nu.id, Math.min(S.view, nu.flat.views.length - 1));
-    }));
-    const tr = document.getElementById('toReal'), t3 = document.getElementById('to3d'), gy = document.getElementById('gyro');
-    if (tr) tr.onclick = () => { S.real = true; showReal(); };
-    if (t3) t3.onclick = () => { S.real = false; realView.close(); renderHud(); };
-    if (gy) gy.onclick = async () => { const ok = await realView.enableGyro(); toast(ok ? t('movePhone') : t('gyroNo')); };
-    $('#hud3d').onclick = () => openInterior(u.type);
+    chips.classList.toggle('hidden', !IS_MOBILE || !realView.active);
+    h.innerHTML = `<div><div class="eyebrow">📷 ${t('balcony14')}</div><h3>${t('balconyAB')}</h3>
+      <small>${t('balconyNote')}</small></div>
+      <button class="btn sm" id="hudX" aria-label="${t('exitView')}">✕ <span class="hide-m">${t('exitView')}</span></button>`;
+    chips.innerHTML = `<button class="chip" id="gyro">📱 ${t('movePhone')}</button>`;
+    const gy = document.getElementById('gyro');
+    if (gy) gy.onclick = async () => { const ok = await realView.enableGyro(); gy.classList.toggle('on', ok); toast(ok ? t('movePhone') : t('gyroNo')); };
     $('#hudX').onclick = () => closeOverlayMode();
-    $('#realPh').classList.add('hidden');
-    const clip = photosForView(u.tower, u.floor, pose.dir as 'N' | 'S' | 'E' | 'W', u.tag.startsWith('Garden')).find((p) => p.video) || (srcs[0] && SITE_PHOTOS.find((p) => p.video && p.set === srcs[0].set));
-    if (clip) {
-      const vb = document.createElement('button');
-      vb.className = 'chip';
-      vb.textContent = '▶ ' + t('playClip');
-      vb.onclick = () => lightbox(photoSrc(clip), photoCaption(clip));
-      chips.insertBefore(vb, chips.children[2] || null);
-    }
-    balcony.onHeading = (deg) => {
-      const el = document.getElementById('hdg');
-      const names = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-      if (el) el.textContent = `${names[Math.round(deg / 45) % 8]} · ${Math.round(deg)}°`;
-      const cmp = document.getElementById('cmpN');
-      if (cmp) cmp.parentElement!.style.transform = `rotate(${-deg}deg)`;
-    };
     return;
   }
-  $('#realPh').classList.add('hidden');
   if (S.mode === 'interior') {
     const ty = (type || UNIT_BY_ID.get(S.unit || '')?.type || 'A') as 'A' | 'B' | 'C';
     const P = PLANS[ty];
@@ -493,64 +403,112 @@ function renderHud(type?: string) {
     chips.classList.remove('hidden');
     h.innerHTML = `<div><div class="eyebrow">${t('interior3d')} · ${P.label}</div><h3>2 BHK · ${Math.round(P.rooms.reduce((s, r) => s + (r.ft ? r.ft[0] * r.ft[1] : 0), 0))} sq ft</h3>
       <small>Furnished in the palette of the actual Vraj Platinum sample flat</small></div>
-      <button class="btn sm" id="hudX">${t('close')}</button>`;
-    chips.innerHTML = `<button class="chip on" id="ov">${t('overview')}</button>` + P.rooms.filter((r) => r.dim).map((r) => `<button class="chip" data-r="${r.id}">${room(r.name)}</button>`).join('') +
-      (S.unit ? `<button class="chip" id="toBal">${t('balconyView')}</button>` : '');
+      <button class="btn sm" id="hudX">✕ <span class="hide-m">${t('close')}</span></button>`;
+    chips.innerHTML = `<button class="chip on" id="ov">${t('overview')}</button>` + P.rooms.filter((r) => r.dim).map((r) => `<button class="chip" data-r="${r.id}">${room(r.name)}</button>`).join('');
     chips.querySelectorAll<HTMLElement>('[data-r]').forEach((b) => (b.onclick = () => {
       chips.querySelectorAll('.chip').forEach((x) => x.classList.remove('on'));
       b.classList.add('on');
       interior.focusRoom(b.dataset.r!);
     }));
     $('#ov').onclick = () => interior.overview();
-    const tb = document.getElementById('toBal');
-    if (tb) tb.onclick = () => { interior.close(); openBalcony(S.unit!, 0); };
     $('#hudX').onclick = () => closeOverlayMode();
     return;
   }
   h.classList.add('hidden');
   chips.classList.add('hidden');
-  $('#realPh').classList.add('hidden');
-  const cmp = document.getElementById('cmpN');
-  if (cmp) cmp.parentElement!.style.transform = '';
 }
 
-// ------------------------------------------------------------------ drone tour
+// ------------------------------------------------------------------ drone tour: one continuous cinematic spline
+// (x = East, y = up, z = South; road on the east at x 43–73, the A|B gap and the garden both lie on z ≈ 0)
 let touring = false;
-const TOUR: { p: [number, number, number]; t: [number, number, number]; d: number; c: number }[] = [
-  { p: [230, 170, 250], t: [0, 12, 0], d: 4.5, c: 0 },
-  { p: [78, 7, 16], t: [40, 3.5, 0], d: 5, c: 1 },
-  { p: [92, 38, -58], t: [27, 24, 0], d: 4.5, c: 2 },
-  { p: [16, 10, 0], t: [-30, 7, 0], d: 5, c: 3 },
-  { p: [-26, 13, 0], t: [-48, 9, 0], d: 4, c: 3 },
-  { p: [-12, 74, 46], t: [-13, 47, 20], d: 5, c: 4 },
-  { p: [-230, 130, -190], t: [0, 18, 0], d: 6, c: 5 },
+type Key = { p: [number, number, number]; t: [number, number, number]; c: number };
+const TOUR_KEYS: Key[] = [
+  { p: [330, 170, 250], t: [0, 20, 0], c: 0 },        // high over the party plot, the whole project
+  { p: [190, 95, 120], t: [10, 24, 0], c: 0 },
+  { p: [110, 34, 46], t: [40, 10, 0], c: 1 },          // descend to the 100 ft road
+  { p: [82, 11, 12], t: [42, 6, 0], c: 1 },            // entrance gate & signage
+  { p: [64, 12, 0], t: [10, 12, 0], c: 2 },            // line up with the gap between towers A and B
+  { p: [30, 13, 0], t: [-20, 11, 0], c: 2 },           // fly through between A and B
+  { p: [0, 14, 0], t: [-40, 9, 0], c: 3 },             // over the central garden
+  { p: [-26, 30, 2], t: [-40, 6, 0], c: 3 },
+  { p: [-30, 78, 8], t: [0, 30, 0], c: 4 },            // climb above the solar roofs
+  { p: [-60, 135, 90], t: [0, 30, 0], c: 4 },
+  { p: [-240, 150, 40], t: [0, 20, 0], c: 5 },         // wide orbit: creek, neighbourhood, skyline
+  { p: [-200, 160, -220], t: [0, 18, 0], c: 5 },
+  { p: [40, 170, -330], t: [0, 18, 0], c: 5 },
+  { p: [165, 125, -205], t: [0, 18, 0], c: 0 },        // settle on the overview
 ];
+let tourTween: gsap.core.Tween | null = null;
+// constant cruising speed with gentle acceleration over the first/last 6 %
+const R_ = 0.06;
+const rampEase = (x: number) => x < R_ ? (x * x) / (2 * R_ * (1 - R_)) : x > 1 - R_ ? 1 - ((1 - x) * (1 - x)) / (2 * R_ * (1 - R_)) : (x - R_ / 2) / (1 - R_);
 async function droneTour() {
   if (touring) { stopTour(); return; }
-  goCampus();
+  if (S.mode === 'balcony' || S.mode === 'interior') closeOverlayMode();
+  Object.assign(S, { mode: 'campus', tower: null, floor: null, unit: null });
+  campus.slice(null, null);
+  campus.showFloorUnits(null, null);
+  renderAll();
+  syncHash();
   touring = true;
+  document.body.classList.add('touring');
   world.controls.enabled = false;
-  renderDock();
-  const cap = $('#tourCap');
-  cap.classList.remove('hidden');
-  for (const k of TOUR) {
-    if (!touring) break;
-    cap.textContent = L(TOUR3[k.c]);
-    await world.flyTo(new THREE.Vector3(...k.p), new THREE.Vector3(...k.t), k.d, 'sine.inOut');
-    if (!touring) break;
-    await new Promise((r) => setTimeout(r, 900));
+  world.controls.autoRotate = false;
+  renderTabs();
+  const P = new THREE.CatmullRomCurve3(TOUR_KEYS.map((k) => new THREE.Vector3(...k.p)), false, 'centripetal');
+  const T = new THREE.CatmullRomCurve3(TOUR_KEYS.map((k) => new THREE.Vector3(...k.t)), false, 'centripetal');
+  // segment durations proportional to length (near-constant speed), slower near the buildings
+  const n = TOUR_KEYS.length - 1;
+  const seg: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = new THREE.Vector3(...TOUR_KEYS[i].p), b = new THREE.Vector3(...TOUR_KEYS[i + 1].p);
+    const speed = THREE.MathUtils.clamp((a.y + b.y) / 2 / 2.6, 8, 50); // m/s: slow between the towers, fast up high
+    seg.push(Math.max(2.4, a.distanceTo(b) / speed));
   }
-  if (touring) { await world.flyTo(CAMPUS_POS, CAMPUS_TARGET, 4, 'sine.inOut'); stopTour(); }
+  const total = seg.reduce((x, y) => x + y, 0);
+  const cum = [0]; seg.forEach((d) => cum.push(cum[cum.length - 1] + d));
+  // bring the camera onto the start of the path first
+  await world.flyTo(P.getPoint(0), T.getPoint(0), 2.4, 'power2.inOut');
+  if (!touring) return;
+  const cap = $('#tourCap'), bar = $('#tourBar');
+  cap.classList.remove('hidden'); $('.tourui').classList.remove('hidden');
+  let lastC = -1;
+  const st = { k: 0 };
+  await new Promise<void>((res) => {
+    tourTween = gsap.to(st, {
+      k: 1, duration: total, ease: rampEase,
+      onUpdate: () => {
+        const time = st.k * total;
+        let i = 0; while (i < n - 1 && time > cum[i + 1]) i++;
+        const u = (i + (time - cum[i]) / seg[i]) / n;
+        world.camera.position.copy(P.getPoint(u));
+        world.controls.target.copy(T.getPoint(u));
+        world.camera.lookAt(world.controls.target);
+        const c = TOUR_KEYS[Math.min(n, Math.round(u * n))].c;
+        if (c !== lastC) { lastC = c; cap.classList.remove('show'); void cap.offsetWidth; cap.textContent = L(TOUR3[c]); cap.classList.add('show'); }
+        bar.style.width = `${(st.k * 100).toFixed(1)}%`;
+      },
+      onComplete: () => res(),
+      onInterrupt: () => res(),
+    });
+  });
+  stopTour();
 }
 function stopTour() {
   if (!touring) return;
   touring = false;
+  tourTween?.kill(); tourTween = null;
   world.stopFlight();
   world.controls.enabled = true;
+  document.body.classList.remove('touring');
   $('#tourCap').classList.add('hidden');
-  renderDock();
+  $('.tourui').classList.add('hidden');
+  lastInteract = Date.now();
+  renderTabs();
+  hint(t('tapTower'));
 }
 canvas.addEventListener('pointerdown', () => { if (touring) stopTour(); });
+$('#tourSkip').onclick = () => stopTour();
 
 // ------------------------------------------------------------------ 3D labels & picking
 const labelLayer = $('#labels');
@@ -668,10 +626,13 @@ function openModal(html: string) {
   $('#sheet').innerHTML = `<button class="x" id="mX" aria-label="${t('close')}">×</button>` + html;
   $('#modal').classList.add('on');
   $('#mX').onclick = closeModal;
+  renderTabs();
   gsap.fromTo('#sheet', { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45, ease: 'power3.out' });
 }
 function closeModal() {
   $('#modal').classList.remove('on');
+  modalTab = '';
+  renderTabs();
   $('#sheet').querySelectorAll('video').forEach((v) => v.pause());
 }
 $('#modal').addEventListener('click', (e) => { if (e.target === $('#modal')) closeModal(); });
@@ -776,11 +737,12 @@ function openPlan(u: Unit) {
       ${P.rooms.filter((r) => r.dim).map((r) => `<div class="spec"><b>${room(r.name)}</b><span>${r.dim} · ${(r.ft![0] * r.ft![1]).toFixed(0)} sq ft</span></div>`).join('')}
       <div class="spec"><b>Total</b><span><b>${u.roomArea} sq ft</b> (${u.roomAreaM2} m²) of room area</span></div>
       <p class="note">Room sizes are clear internal dimensions printed in the brochure. RERA carpet / super built-up area as per the developer’s agreement.</p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn primary" id="p3d">${icon('cube')}${t('interior3d')}</button><button class="btn" id="pBal">${icon('eye')}${t('balconyView')}</button></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px"><button class="btn primary" id="p3d">${icon('cube')}${t('interior3d')}</button>${u.tower === 'A' || u.tower === 'B' ? `<button class="btn" id="pBal">${icon('eye')}${t('balcony14')}</button>` : ''}</div>
     </div></div>`);
   $('#planImg').onclick = () => lightbox(PLAN_IMG[u.type], `${P.label} plan`);
   $('#p3d').onclick = () => { closeModal(); openInterior(u.type); };
-  $('#pBal').onclick = () => { closeModal(); openBalcony(u.id, 0); };
+  const pb = document.getElementById('pBal');
+  if (pb) pb.onclick = () => { closeModal(); openBalconyView(); };
 }
 
 function openCost(u: Unit) {
@@ -831,6 +793,7 @@ function openCost(u: Unit) {
 }
 
 function openResidences() {
+  modalTab = 'homes';
   const f = { tower: 'all', type: 'all', facing: 'all', avail: true, minF: 1, maxF: 14 };
   const tags = [...new Set(UNITS.map((u) => u.tag))];
   openModal(`<div class="eyebrow">336 homes · 6 towers</div><h2>${t('filters')}</h2>
@@ -884,23 +847,67 @@ function openEnquiry() {
   };
 }
 
+// ------------------------------------------------------------------ "More" sheet & the 4-step customer guide
+function openMore() {
+  modalTab = 'more';
+  const items: [string, string, () => void][] = [
+    ['img', t('sampleFlat'), () => openSampleFlat()],
+    ['img', t('gallery'), () => openGallery()],
+    ['pin', t('location'), () => openLocation()],
+    ['doc', t('specs'), () => openSpecs()],
+    ['help', t('howTo'), () => { closeModal(); showGuide(); }],
+  ];
+  openModal(`<div class="eyebrow">Vraj Platinum</div><h2>${t('tabMore')}</h2>
+    <div class="more-list">${items.map(([ic, lb], i) => `<button data-i="${i}">${icon(ic)}<span>${lb}</span><b>›</b></button>`).join('')}</div>
+    <div class="more-cta">
+      <a class="btn primary" href="${waLink()}" target="_blank" rel="noopener">${icon('wa')}${t('whatsapp')}</a>
+      <a class="btn" href="tel:${PROJECT.phone}">${icon('phone')}${t('call')}</a>
+      <a class="btn" href="${PROJECT.brochure}" target="_blank" rel="noopener">${icon('doc')}${t('brochure')}</a>
+    </div>`);
+  $('#sheet').querySelectorAll<HTMLElement>('[data-i]').forEach((b) => (b.onclick = () => items[+b.dataset.i!][2]()));
+  renderTabs();
+}
+function showGuide() {
+  const g = $('#guide');
+  const steps: [string, string, string][] = [
+    ['drone', t('step1t'), t('step1d')],
+    ['home', t('step2t'), t('step2d')],
+    ['eye', t('step3t'), t('step3d')],
+    ['wa', t('step4t'), t('step4d')],
+  ];
+  g.innerHTML = `<div class="guide-card panel">
+    <img src="/img/logo.png" alt="Vraj Platinum">
+    <div class="eyebrow">${t('howTo')}</div>
+    <ol>${steps.map(([ic, ti, d], i) => `<li><span class="n">${i + 1}</span><div><b>${icon(ic)}${ti}</b><small>${d}</small></div></li>`).join('')}</ol>
+    <button class="btn primary big" id="gTour">${icon('play')}${t('startTour')}</button>
+    <button class="btn ghost" id="gSelf">${t('exploreSelf')}</button>
+  </div>`;
+  g.classList.remove('hidden');
+  gsap.fromTo(g.firstElementChild, { y: 30, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: 'power3.out' });
+  const close = () => { g.classList.add('hidden'); safeSet('vp-guided', '1'); };
+  $('#gTour').onclick = () => { close(); droneTour(); };
+  $('#gSelf').onclick = () => { close(); hint(t('tapTower')); };
+  g.onclick = (e) => { if (e.target === g) close(); };
+}
+
 // ------------------------------------------------------------------ routing (#/tower/D/7/D-703/balcony/0)
 function syncHash() {
   let h = '#/';
   if (S.tower) h += `tower/${S.tower}`;
   if (S.floor) h += `/${S.floor}`;
   if (S.unit) h += `/${S.unit}`;
-  if (S.mode === 'balcony') h += `/balcony/${S.view}`;
+  if (S.mode === 'balcony') h = '#/balcony';
   if (S.mode === 'interior') h += '/interior';
   if (location.hash !== h) history.replaceState(null, '', h);
 }
 function route() {
   const p = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+  if (p[0] === 'balcony') { openBalconyView(); return; }
+  if (p[0] === 'tour') { droneTour(); return; }
   if (p[0] === 'tower' && p[1] && TOWERS.includes(p[1])) {
     const f = p[2] ? +p[2] : null;
     if (p[3] && UNIT_BY_ID.has(p[3])) {
       selectUnit(p[3]);
-      if (p[4] === 'balcony') openBalcony(p[3], +(p[5] || 0));
       if (p[4] === 'interior') openInterior(UNIT_BY_ID.get(p[3])!.type);
     } else selectTower(p[1], f && f >= 1 && f <= NF ? f : null);
   } else goCampus();
@@ -908,7 +915,7 @@ function route() {
 
 // ------------------------------------------------------------------ boot
 function renderAll() {
-  renderNav(); renderCtx(); renderCard(); renderDock(); renderHud();
+  renderTabs(); renderCtx(); renderCard(); renderDock(); renderHud();
   rebuildUnitLabels(); updateTowerLabelText();
   ldText.textContent = entered ? ldText.textContent : t('loading');
   enterBtn.textContent = t('enter');
@@ -918,4 +925,4 @@ document.documentElement.lang = getLang();
 setHour(10); // morning sun on the road (east) and garden (south) faces the default views look at
 renderAll();
 world.renderer.domElement.addEventListener('webglcontextlost', (e) => { e.preventDefault(); toast('Graphics paused — tap to reload'); setTimeout(() => location.reload(), 1500); });
-(window as unknown as { vp: unknown }).vp = { world, campus, ground, context, trees, S, droneTour, stopTour, selectUnit, openBalcony, openInterior, goCampus, setHour, selectTower, selectFloor };
+(window as unknown as { vp: unknown }).vp = { world, campus, ground, context, trees, S, droneTour, stopTour, selectUnit, openBalconyView, openInterior, showGuide, goCampus, setHour, selectTower, selectFloor };

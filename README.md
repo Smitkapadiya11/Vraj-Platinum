@@ -10,24 +10,18 @@ GSAP for camera choreography, **Vite** build, deployed as a static site on **Ver
 
 | Feature | Notes |
 |---|---|
-| Real-location campus | Plot placed at the Google-Maps pin (21.2318 N, 72.9137 E, origin 43 m west of the gate), streamed Esri satellite ground, 177 real neighbouring buildings from OpenStreetMap with real storey counts |
-| 6 towers matched to the real buildings | Re-modelled from the 23 Nov 2026 site photos: charcoal sand-finish piers, white textured walls, bronze strips, cantilevered balconies (MS-bar / glass railings), stilt ground floor, rooftop steel solar canopy, stone & bronze entrance signage, wooden slat gates, guard cabin, black steel garden portal |
-| Photo-derived textures | `scripts/make_textures.py` builds tileable textures from the site photos; Blender exports world-metre UVs so they sit at real scale |
-| Real balcony view (touch & look around) | Panoramas stitched (OpenCV) from the developer's 23 Nov 2026 clips — 14th-floor east (road / Unity Party Plot), 14th-floor west (campus), 1st-floor garden — wrapped at true angular width; drag, pinch or move the phone. Every flat gets its matching capture (or the nearest one, labelled) with a note on capture floor vs. the flat's floor, plus a toggle to the 3D view at the exact floor |
-| Real site photos | 30 photos + 4 clips in a "Site today" gallery; the balcony view shows the matching real photos for that side & height |
-| Drone tour | Captioned cinematic flight: aerial, entrance, front towers, garden fly-through, rooftop solar, neighbourhood |
-| Sunlight hours | Direct sun on each balcony today / 21 June / 21 Dec, ray-traced against the towers and neighbouring buildings |
-| Tower → floor → unit | Floor slicing with a ghost volume above, colour-coded availability plates, labels, hover & tap picking |
-| Balcony view for every flat | First-person camera on the actual balcony at the real height and facing, drag to look, pinch/scroll zoom, floor ▲▼ hopping, compass heading |
-| Furnished 3D interiors | Type A/B/C modelled from the brochure plans, furnished in the palette of the real sample flat, light baked in Cycles |
-| Real sun & time | NOAA solar position for Surat; time slider; day/night with lit windows, lamps and bloom |
-| Unit card | Room area (from brochure dims), facing, height, plan image, WhatsApp enquiry, shortlist, share deep-link |
+| Customer guide | 4 simple steps on first visit (drone tour → pick your home → real balcony view → WhatsApp), reopen from the ? button |
+| Mobile-first navigation | One bottom tab bar: Explore · Drone · Balcony · Homes · More; WhatsApp in the header; day/night & reset as floating buttons |
+| Real-location presentation map | Crisp vector map baked from OpenStreetMap (roads, creek, land use, 720 buildings) + land cover classified from satellite imagery; turf grounds across the 30 m road from the 2026 Google Earth reference |
+| Neighbourhood as an architect's white model | Real footprints and storey counts, procedural window grid, rooftop solar, ~4000 instanced trees (mangroves along the creek) |
+| 6 towers | Clean vector materials in the real site colours: charcoal piers, white bands, wood strips, glass/bar railings, stilts, solar canopy, stone & bronze entrance |
+| Drone tour | One continuous spline flight (~1 min): aerial → road & entrance → through the gap between A and B → over the garden → solar roofs → neighbourhood orbit; captions in 3 languages |
+| Real balcony view | The real 14th-floor road-side panorama from Tower A/B (23 Nov 2026); the drone glides to the balcony, then drag, pinch or move the phone to look around |
+| Tower → floor → flat | Floor slicing, colour-coded availability, flat card with plan, size, facing, height |
+| Furnished 3D interiors | Type A/B/C from the brochure plans, sample-flat palette, light baked in Cycles |
 | Cost & EMI | Gujarat stamp duty 4.9 %, registration 1 % (waived for sole woman buyer), GST 1 %/5 %/nil, EMI |
-| Find your home | Filter by tower, type, view, floor band, availability |
-| Sample flat | Actual walkthrough video + stills |
-| Gallery, location, specs | Brochure renders, landmarks, Gujarati specifications translated |
-| EN / ગુજરાતી / हिन्दी | UI and all project content (specs, amenities, highlights, nearby, rooms, views, tour) |
-| Mobile + desktop | Bottom sheets & compact controls on phones, adaptive resolution |
+| Homes finder, sample flat, gallery, location, specs | In the Homes tab and the More sheet |
+| EN / ગુજરાતી / हिन्दी | All UI and project content |
 
 ## Before going live (developer data)
 

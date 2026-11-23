@@ -1,5 +1,12 @@
 // Minimal line icons (24px grid)
 const P: Record<string, string> = {
+  drone: '<circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="5" cy="18" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7 8l3 3M17 8l-3 3M7 16l3-3M17 16l-3-3"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/>',
+  home: '<path d="M3 11l9-7 9 7M5 10v10h14V10M10 20v-6h4v6"/>',
+  menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+  play: '<path d="M8 5l11 7-11 7z"/>',
+  help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 015 0c0 1.8-2.5 2-2.5 4M12 17h.01"/>',
+  img: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.5"/>',
+  doc: '<path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h7"/>',
   gate: '<path d="M3 21V8l9-5 9 5v13M7 21v-8h10v8M10 13v8M14 13v8"/>',
   shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
   cctv: '<path d="M3 7l13 4-2 5-12-4z"/><path d="M14 15l2 3h4M20 13v7"/>',

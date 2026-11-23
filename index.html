@@ -4,16 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1" />
   <title>Vraj Platinum · 2-BHK Superior Living, Sarthana, Surat · 3D Residence Explorer</title>
-  <meta name="description" content="Explore Vraj Platinum in 3D: six G+14 towers on the 100 ft Sarthana–Gadhpur Road, Surat. Pick a tower and floor, check availability, see the real balcony view from any flat, walk the furnished 3D interior and calculate cost & EMI." />
+  <meta name="description" content="Explore Vraj Platinum in 3D: six G+14 towers on the 100 ft Sarthana–Gadhpur Road, Surat. Drone tour, pick a tower, floor and flat, see the real 14th-floor balcony view, walk the furnished 3D interior and calculate cost & EMI." />
   <meta name="theme-color" content="#0b0f14" />
   <meta property="og:title" content="Vraj Platinum · 3D Residence Explorer" />
-  <meta property="og:description" content="Six G+14 towers · 2-BHK superior living · Sarthana, Surat. Real balcony views from every flat." />
+  <meta property="og:description" content="Six G+14 towers · 2-BHK superior living · Sarthana, Surat. Real balcony view from the 14th floor." />
   <meta property="og:image" content="/img/night.jpg" />
   <link rel="icon" href="/img/logo.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="preconnect" href="https://server.arcgisonline.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Gujarati:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=Noto+Sans+Gujarati:wght@400;600;700&family=Noto+Sans+Devanagari:wght@400;600;700&display=swap" rel="stylesheet" />
 </head>
 <body>
   <canvas id="c" tabindex="0" aria-label="Interactive 3D model of Vraj Platinum"></canvas>
@@ -35,13 +34,11 @@
       <img src="/img/logo.png" alt="" />
       <div><b>Vraj Platinum</b><small>2-BHK Superior Living · Sarthana, Surat</small></div>
     </a>
-    <nav id="nav"></nav>
     <div class="top-right">
       <select class="lang" id="lang" aria-label="Language">
         <option value="en">EN</option><option value="gu">ગુજ</option><option value="hi">हिं</option>
       </select>
       <button class="btn primary enq" id="enqTop"></button>
-      <button class="btn icon" id="menuBtn" aria-label="Menu">☰</button>
     </div>
   </header>
 
@@ -51,7 +48,10 @@
   <div id="chips" class="room-chips panel hidden"></div>
   <div id="hint"></div>
   <div id="tourCap" class="tourcap hidden"></div>
-  <div id="realPh" class="realph panel hidden"></div>
+  <div class="tourui hidden"><div class="tbar"><i id="tourBar"></i></div><button class="btn sm" id="tourSkip">■ Stop</button></div>
+  <div id="balFade"></div>
+  <nav id="tabs" class="panel" aria-label="Main"></nav>
+  <div id="guide" class="hidden"></div>
   <div id="dock" class="panel"></div>
   <div id="modal"><div class="sheet panel" id="sheet"></div></div>
   <div class="attrib" id="attrib">Map data © OpenStreetMap contributors · Land cover derived from Esri World Imagery (satellite view © Esri, Maxar, Earthstar Geographics) · Renders &amp; plans © Vraj Group</div>

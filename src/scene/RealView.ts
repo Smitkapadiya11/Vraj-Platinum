@@ -81,6 +81,9 @@ export class RealView {
     this.tFov = this.fov = Math.min(IS_MOBILE ? 72 : 58, this.maxFov());
     this.yaw = this.tYaw = 0; this.pitch = this.tPitch = 0;
     this.clamp();
+    // start looking slightly down, towards the ground detail rather than the sky
+    const plim0 = Math.max(0, this.vspan / 2 - THREE.MathUtils.degToRad(this.tFov) / 2);
+    this.pitch = this.tPitch = -plim0 * 0.55;
     this.camera.fov = this.fov; this.camera.updateProjectionMatrix();
     // gentle intro sweep so people discover they can look around
     const ylim = Math.max(0, this.span / 2 - Math.atan(Math.tan(THREE.MathUtils.degToRad(this.fov) / 2) * this.camera.aspect));
