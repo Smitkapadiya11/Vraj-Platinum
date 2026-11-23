@@ -50,6 +50,15 @@ export class Context {
       const pts: THREE.Vector2[] = [];
       for (let i = 0; i < ring.length; i += 2) pts.push(new THREE.Vector2(ring[i] + offsetE, ring[i + 1]));
       if (THREE.ShapeUtils.isClockWise(pts)) pts.reverse();
+      // OSM footprints can be offset by a few metres: keep neighbours outside the plot (+3 m setback)
+      const bb = new THREE.Box2().setFromPoints(pts);
+      const P = { x0: -46, x1: 46, y0: -40.5, y1: 40.5 };
+      if (bb.max.x > P.x0 && bb.min.x < P.x1 && bb.max.y > P.y0 && bb.min.y < P.y1) {
+        const moves = [[P.x0 - bb.max.x, 0], [P.x1 - bb.min.x, 0], [0, P.y0 - bb.max.y], [0, P.y1 - bb.min.y]];
+        moves.sort((a, b) => Math.hypot(a[0], a[1]) - Math.hypot(b[0], b[1]));
+        if (Math.hypot(moves[0][0], moves[0][1]) > 15) continue;
+        pts.forEach((p) => { p.x += moves[0][0]; p.y += moves[0][1]; });
+      }
       // walls
       let u = 0;
       for (let i = 0; i < pts.length; i++) {
@@ -77,15 +86,30 @@ export class Context {
       vertexColors: true, map: windowTexture(false), emissiveMap: windowTexture(true), emissive: 0xffffff,
       emissiveIntensity: 0, roughness: 0.85, side: THREE.DoubleSide,
     });
+    this.fadeShader(this.wallMat);
     const walls = new THREE.Mesh(wg, this.wallMat);
     walls.castShadow = true; walls.receiveShadow = true;
     const rg = new THREE.BufferGeometry();
     rg.setAttribute('position', new THREE.Float32BufferAttribute(rp, 3));
     rg.setAttribute('color', new THREE.Float32BufferAttribute(rc, 3));
     rg.computeVertexNormals();
-    const roofs = new THREE.Mesh(rg, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, side: THREE.DoubleSide }));
+    const roofMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, side: THREE.DoubleSide });
+    this.fadeShader(roofMat);
+    const roofs = new THREE.Mesh(rg, roofMat);
     roofs.receiveShadow = true;
     this.group.add(walls, roofs);
+  }
+
+  /** neighbours closer than `clear` metres to the camera are cut away (orbit views); 0 in balcony views */
+  clear = { value: 40 };
+  private fadeShader(m: THREE.Material) {
+    m.onBeforeCompile = (sh) => {
+      sh.uniforms.uClear = this.clear;
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP;')
+        .replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vWP;\nuniform float uClear;')
+        .replace('void main() {', 'void main() {\n if (distance(vWP, cameraPosition) < uClear) discard;');
+    };
   }
 
   setNight(n: number) { this.wallMat.emissiveIntensity = 0.9 * n; }

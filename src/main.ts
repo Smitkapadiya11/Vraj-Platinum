@@ -271,6 +271,7 @@ function towerCam(tw: string, floor?: number | null) {
   return { pos, target };
 }
 function goCampus() {
+  context.clear.value = 40;
   if (S.mode === 'balcony') balcony.exit();
   if (S.mode === 'interior') interior.close();
   Object.assign(S, { mode: 'campus', tower: null, floor: null, unit: null });
@@ -281,6 +282,7 @@ function goCampus() {
   syncHash();
 }
 function selectTower(tw: string, floor: number | null = null) {
+  context.clear.value = 40;
   if (S.mode === 'balcony') balcony.exit();
   if (S.mode === 'interior') interior.close();
   Object.assign(S, { mode: 'tower', tower: tw, floor, unit: null });
@@ -335,6 +337,7 @@ async function openBalcony(id: string, view: number) {
   syncHash();
   const pose = campus.balconyPose(u, view);
   renderHud();
+  context.clear.value = 0;
   await balcony.enter(pose.pos, pose.look);
   hint(t('lookAround'));
 }
@@ -350,6 +353,7 @@ async function openInterior(type: 'A' | 'B' | 'C') {
   void prev;
 }
 function closeOverlayMode() {
+  context.clear.value = 40;
   if (S.mode === 'balcony') balcony.exit();
   if (S.mode === 'interior') interior.close();
   S.mode = S.unit ? 'unit' : S.tower ? 'tower' : 'campus';

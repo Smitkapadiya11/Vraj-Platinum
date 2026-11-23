@@ -16,7 +16,7 @@ FH, GH = site['floorH'], site['groundH']
 reset()
 reset_mats()
 M = dict(
-    plaster=mat('plaster', '#ECEBE6', 0.85),
+    plaster=mat('plaster', '#DCDAD5', 0.85),
     white=mat('white', '#F5F4F0', 0.7),
     charcoal=mat('charcoal', '#4A4D53', 0.8),
     grey=mat('grey', '#8E9196', 0.85),
@@ -103,8 +103,8 @@ def facade(lst, r, side, style, flat_idx):
     o, u, n, L = side_frame(r, side)
     if style == 'primary':
         # charcoal end band, rust cladding, glazing behind a deep balcony frame
-        sbox(lst, o, u, n, 0, 0.7, 0, 0.45, 0, FH, M['charcoal'])
-        sbox(lst, o, u, n, L - 0.9, L, 0, 0.3, 0, FH, M['rust'] if flat_idx % 2 == 0 else M['charcoal'])
+        sbox(lst, o, u, n, 0, 0.95, 0, 0.5, 0, FH, M['charcoal'])
+        sbox(lst, o, u, n, L - 1.05, L, 0, 0.35, 0, FH, M['rust'])
         b0, b1 = 1.1, L - 1.3
         window(lst, o, u, n, b0 + 0.2, b1 - 0.2, 0.15, 2.45, mullions=max(2, int((b1 - b0) / 1.6)))
         balcony(lst, o, u, n, b0, b1, 1.25)
@@ -118,7 +118,7 @@ def facade(lst, r, side, style, flat_idx):
     else:  # secondary: service side with small windows
         for a in (L * 0.25, L * 0.7):
             window(lst, o, u, n, a - 0.35, a + 0.35, 1.6, 2.3, 1)
-        sbox(lst, o, u, n, L * 0.45, L * 0.5, 0, 0.12, 0, FH, M['grey'])
+        sbox(lst, o, u, n, L * 0.42, L * 0.55, 0, 0.18, 0, FH, M['charcoal'])
 
 
 def build_block(b):
