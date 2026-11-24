@@ -12,7 +12,7 @@ export class RealView {
   camera = new THREE.PerspectiveCamera(IS_MOBILE ? 64 : 55, innerWidth / innerHeight, 0.1, 100);
   active = false;
   private mesh?: THREE.Mesh;
-  private span = 1.6; private vspan = 0.9;
+  private span = 1.6; private vspan = 0.9; private full = false;
   private yaw = 0; private pitch = 0; private tYaw = 0; private tPitch = 0; private fov = 55; private tFov = 55;
   private drag?: { x: number; y: number; yaw: number; pitch: number };
   private pinch?: number;
@@ -44,17 +44,19 @@ export class RealView {
     world.onTick(() => this.update());
   }
 
-  private maxFov() { return Math.min(IS_MOBILE ? 78 : 70, THREE.MathUtils.radToDeg(this.vspan) * 0.98); }
+  private maxFov() { return this.full ? (IS_MOBILE ? 90 : 85) : Math.min(IS_MOBILE ? 78 : 70, THREE.MathUtils.radToDeg(this.vspan) * 0.98); }
 
   private clamp() {
     const hf = THREE.MathUtils.degToRad(this.tFov) / 2;
     const hfh = Math.atan(Math.tan(hf) * this.camera.aspect);
     const ylim = Math.max(0, this.span / 2 - hfh), plim = Math.max(0, this.vspan / 2 - hf);
+    if (this.full) { this.tPitch = THREE.MathUtils.clamp(this.tPitch, -Math.PI / 2 + 0.02, Math.PI / 2 - 0.02); return; }
     this.tYaw = THREE.MathUtils.clamp(this.tYaw, -ylim, ylim);
     this.tPitch = THREE.MathUtils.clamp(this.tPitch, -plim, plim);
   }
 
-  async open(src: string, kind: 'pano' | 'photo') {
+  async open(src: string, kind: 'pano' | 'photo' | 'sphere') {
+    this.full = kind === 'sphere';
     this.active = true;
     this.world.controls.enabled = false;
     this.world.overrideScene = { scene: this.scene, camera: this.camera };
@@ -64,6 +66,7 @@ export class RealView {
     if (!tex || !this.active) { this.onLoad?.(false); return; }
     tex.colorSpace = THREE.SRGBColorSpace;
     tex.anisotropy = 8;
+    if (this.full) return this.openSphere(tex);
     const img = tex.image as HTMLImageElement;
     const aspect = img.width / img.height;
     // angular size: phone main camera ≈ 42° vertical for clips, ≈ 64° for portrait photos
@@ -88,6 +91,26 @@ export class RealView {
     // gentle intro sweep so people discover they can look around
     const ylim = Math.max(0, this.span / 2 - Math.atan(Math.tan(THREE.MathUtils.degToRad(this.fov) / 2) * this.camera.aspect));
     if (ylim > 0.1) { this.tYaw = -ylim * 0.6; gsap.delayedCall(1.4, () => { if (this.active && !this.drag) this.tYaw = 0; }); }
+    this.onLoad?.(true);
+  }
+
+  /** true 360°: an equirectangular image on the inside of a sphere — look anywhere, up and down included */
+  private openSphere(tex: THREE.Texture) {
+    tex.generateMipmaps = true;
+    tex.minFilter = THREE.LinearMipmapLinearFilter;
+    if (this.mesh) { this.scene.remove(this.mesh); this.mesh.geometry.dispose(); ((this.mesh.material as THREE.MeshBasicMaterial).map)?.dispose(); }
+    const g = new THREE.SphereGeometry(10, 96, 64);
+    g.scale(-1, 1, 1);
+    this.mesh = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+    this.mesh.rotation.y = -Math.PI / 2;          // image centre = straight out from the balcony
+    this.scene.add(this.mesh);
+    this.span = Math.PI * 2; this.vspan = Math.PI;
+    this.tFov = this.fov = IS_MOBILE ? 80 : 70;
+    this.camera.fov = this.fov; this.camera.updateProjectionMatrix();
+    this.yaw = this.tYaw = -0.5; this.pitch = this.tPitch = -0.12;
+    // slow reveal sweep across the real view so people discover they can look around
+    gsap.delayedCall(0.6, () => { if (this.active && !this.drag) this.tYaw = 0.35; });
+    gsap.delayedCall(2.4, () => { if (this.active && !this.drag) this.tYaw = 0; });
     this.onLoad?.(true);
   }
 

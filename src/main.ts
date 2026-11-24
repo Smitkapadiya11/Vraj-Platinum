@@ -323,7 +323,7 @@ function refreshFloor() {
 }
 
 // ------------------------------------------------------------------ the one real balcony view (14th floor, Tower A/B, road side)
-const BALCONY = { src: '/site/pano/162359770.jpg', tower: 'A', floor: 14 };
+const BALCONY = { src: IS_MOBILE ? '/site/pano/vp360_A14_m.jpg' : '/site/pano/vp360_A14.jpg', tower: 'A', floor: 14 };
 const BAL_UNIT = UNITS.find((u) => u.tower === BALCONY.tower && u.floor === BALCONY.floor && u.flat.views.some((v) => v.dir === 'E'))!;
 let balReturn: { unit: string | null; tower: string | null; floor: number | null } | null = null;
 async function openBalconyView() {
@@ -348,7 +348,7 @@ async function openBalconyView() {
   if (S.mode !== 'balcony') { $('#balFade').classList.remove('on'); return; }
   $('#balFade').classList.add('white');
   await new Promise((r) => setTimeout(r, 250));
-  await realView.open(BALCONY.src, 'pano');
+  await realView.open(BALCONY.src, 'sphere');
   $('#balFade').classList.remove('white', 'on');
   if (S.mode !== 'balcony') { realView.close(); return; }
   renderHud();
