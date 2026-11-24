@@ -317,15 +317,17 @@ if gm and gm.use_nodes:
         nt_.links.new(geo.outputs['Position'], snap.inputs[0])
         wn = node(nt_, 'ShaderNodeTexWhiteNoise', noise_dimensions='3D')
         nt_.links.new(snap.outputs[0], wn.inputs['Vector'])
-        lt = node(nt_, 'ShaderNodeMath', operation='LESS_THAN', inputs={1: 0.55})
+        lt = node(nt_, 'ShaderNodeMath', operation='LESS_THAN', inputs={1: 0.38})
         nt_.links.new(wn.outputs['Value'], lt.inputs[0])
         nv = node(nt_, 'ShaderNodeAttribute', attribute_type='VIEW_LAYER', attribute_name='night')
         m1 = node(nt_, 'ShaderNodeMath', operation='MULTIPLY')
         nt_.links.new(lt.outputs[0], m1.inputs[0]); nt_.links.new(nv.outputs['Fac'], m1.inputs[1])
-        m2 = node(nt_, 'ShaderNodeMath', operation='MULTIPLY', inputs={1: 9.0})
+        m2 = node(nt_, 'ShaderNodeMath', operation='MULTIPLY')
         nt_.links.new(m1.outputs[0], m2.inputs[0])
+        vr = node(nt_, 'ShaderNodeMapRange', inputs={3: 0.7, 4: 2.6})  # per-window brightness
+        nt_.links.new(wn.outputs['Value'], vr.inputs[0]); nt_.links.new(vr.outputs[0], m2.inputs[1])
         nt_.links.new(m2.outputs[0], pb.inputs['Emission Strength'])
-        pb.inputs['Emission Color'].default_value = (1.0, 0.7, 0.42, 1)
+        pb.inputs['Emission Color'].default_value = (1.0, 0.66, 0.36, 1)
 
 # ------------------------------------------------------------------ ground (real land-use map) + detail
 C_G = coll('GROUND')

@@ -7,9 +7,9 @@ from mathutils import Vector
 
 PRESETS = {
     #          sun elev, azimuth (deg from north, clockwise), sun strength, sky strength, sun colour, exposure, night
-    'day':    dict(elev=36.0, az=128.0, sun=4.2, sky=0.32, col=(1.0, 0.96, 0.9), expo=-0.9, night=0.0),
-    'sunset': dict(elev=5.0, az=247.0, sun=2.4, sky=0.6, col=(1.0, 0.62, 0.34), expo=-0.4, night=0.35),
-    'night':  dict(elev=-20.0, az=250.0, sun=0.0, sky=0.0, col=(0.6, 0.7, 1.0), expo=0.9, night=1.0),
+    'day':    dict(elev=36.0, az=128.0, sun=5.0, sky=0.42, col=(1.0, 0.95, 0.86), expo=-0.25, night=0.0),
+    'sunset': dict(elev=9.0, az=247.0, sun=4.6, sky=0.7, col=(1.0, 0.6, 0.32), expo=0.1, night=0.35),
+    'night':  dict(elev=-20.0, az=250.0, sun=0.0, sky=2.6, col=(0.6, 0.7, 1.0), expo=-0.35, night=1.0),
 }
 
 
@@ -63,7 +63,7 @@ def set_time(kind='day'):
         ramp.color_ramp.elements[1].color = (0.004, 0.007, 0.02, 1)
         nt.links.new(grad.outputs['Fac'], ramp.inputs[0])
         nt.links.new(ramp.outputs['Color'], bg.inputs['Color'])
-        bg.inputs['Strength'].default_value = 1.0
+        bg.inputs['Strength'].default_value = p['sky']
     # sun lamp (shadows)
     sun = bpy.data.objects.get('SUN')
     if not sun:
@@ -74,7 +74,7 @@ def set_time(kind='day'):
     if kind == 'night':   # moonlight from high up
         to_sun = Vector((0.3, -0.4, 0.86)).normalized()
     sun.rotation_euler = (-to_sun).to_track_quat('-Z', 'Y').to_euler()
-    sun.data.energy = p['sun'] if kind != 'night' else 0.06
+    sun.data.energy = p['sun'] if kind != 'night' else 0.45
     sun.data.color = p['col']
     sun.data.angle = math.radians(0.6 if kind != 'sunset' else 1.2)
     sc.view_settings.exposure = p['expo']
