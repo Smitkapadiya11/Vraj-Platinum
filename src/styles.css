@@ -372,3 +372,20 @@ body.touring #ctx, body.touring #card, body.touring .labels, body.touring #dock,
 #hint:empty { display: none; }
 .btn.exitb { background: #f4f1ec; color: #111; border-color: transparent; }
 @media (max-width: 860px) { body.bal #hint { top: auto; bottom: calc(140px + var(--safe-b)); } }
+
+/* ================= photoreal orbit ================= */
+.porbit { position: fixed; inset: 0; z-index: 2; background: #0b0f14; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+.porbit:active { cursor: grabbing; }
+.porbit canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.porbit .pov { pointer-events: none; mix-blend-mode: normal; }
+body.photo #labels, body.photo .labels { display: none !important; }
+.ptip { position: fixed; left: 0; top: 0; z-index: 20; pointer-events: none; padding: 6px 10px; border-radius: 10px; font-size: 12.5px;
+  background: rgba(12, 15, 20, .82); border: 1px solid var(--line-2); backdrop-filter: blur(8px); white-space: nowrap; }
+.ptip b { font-weight: 800; }
+.ptip .dot { margin: 0 4px 0 6px; }
+.fab.txt { font-weight: 800; font-size: 13px; letter-spacing: .02em; }
+.fab { position: relative; }
+.sunsetdot { position: absolute; right: 9px; bottom: 9px; width: 8px; height: 8px; border-radius: 50%; background: #ff8a3c; }
+@media (min-width: 861px) {
+  body.photo #dock { right: auto; left: calc(50% + 228px); bottom: calc(18px + var(--safe-b)); flex-direction: row; }
+}

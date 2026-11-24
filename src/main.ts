@@ -8,6 +8,7 @@ import { Context } from './scene/Context';
 import { Trees } from './scene/Trees';
 import { Interior } from './scene/Interior';
 import { RealView } from './scene/RealView';
+import { PhotoOrbit, type Kind as PhotoKind } from './scene/PhotoOrbit';
 import { SITE, PROJECT, PLANS, GALLERY, SAMPLE_FLAT, PLAN_IMG } from './data/project';
 import { UNITS, UNIT_BY_ID, TOWERS, DIR_NAME, unitsOf, type Unit } from './data/units';
 import { t, setLang, getLang, onLang, type Lang } from './ui/i18n';
@@ -28,6 +29,40 @@ const trees = new Trees(IS_MOBILE);
 world.scene.add(trees.group);
 const interior = new Interior(world, $('#roomLabels'));
 const realView = new RealView(world);
+// photoreal orbit (pre-rendered Cycles frames); falls back to live 3D when the renders aren't deployed
+const orbit = new PhotoOrbit(document.body);
+let photoPref = false;
+orbit.statusOf = (id) => UNIT_BY_ID.get(id)?.status ?? 'available';
+orbit.load(`/pr/manifest.json?v=${__BUILD__}`).then(() => { photoPref = true; syncPhoto(); renderDock(); }).catch(() => {});
+orbit.onPick = (id) => {
+  if (id) { selectUnit(id); return; }
+  if (S.unit) { S.unit = null; S.mode = S.tower ? 'tower' : 'campus'; orbit.focus(null); syncPhoto(); renderCtx(); renderCard(); syncHash(); }
+};
+const ptip = document.createElement('div');
+ptip.className = 'ptip hidden';
+document.body.appendChild(ptip);
+orbit.onHover = (id, x, y) => {
+  if (!id) { ptip.classList.add('hidden'); return; }
+  const u = UNIT_BY_ID.get(id);
+  if (!u) return;
+  ptip.innerHTML = `<b>${u.id}</b> · ${t('floor')} ${u.floor} · <span class="dot ${u.status}"></span>${t(u.status)}`;
+  ptip.style.transform = `translate(${x + 14}px, ${y + 14}px)`;
+  ptip.classList.remove('hidden');
+};
+function photoActive() { return photoPref && orbit.ready && ['campus', 'tower', 'unit'].includes(S.mode) && !touring; }
+function syncPhoto() {
+  const on = photoActive();
+  if (on && !orbit.active) orbit.open();
+  if (!on && orbit.active) orbit.close();
+  world.paused = on;
+  document.body.classList.toggle('photo', on);
+  if (on) {
+    orbit.tintAll = !S.tower;
+    orbit.tintTower = S.tower;
+    orbit.tintFloor = S.floor;
+    orbit.selected = S.unit;
+  }
+}
 
 type Mode = 'campus' | 'tower' | 'unit' | 'balcony' | 'interior';
 const S = { mode: 'campus' as Mode, tower: null as string | null, floor: null as number | null, unit: null as string | null, view: 0, hover: null as string | null };
@@ -109,6 +144,31 @@ function renderDock() {
   d.innerHTML = `<button class="fab" id="dayNight" title="${t('dayNight')}" aria-label="${t('dayNight')}">${icon(world.night > 0.5 ? 'sun' : 'moon')}</button>
     <button class="fab" id="resetCam" title="${t('reset')}" aria-label="${t('reset')}">${icon('reset')}</button>
     <button class="fab" id="helpBtn" title="${t('howTo')}" aria-label="${t('howTo')}">${icon('help')}</button>`;
+  if (orbit.ready) {
+    const b = document.createElement('button');
+    b.className = 'fab txt'; b.id = 'viewToggle';
+    b.textContent = photoPref ? '3D' : '📷';
+    b.title = photoPref ? 'Live 3D' : 'Photoreal';
+    d.prepend(b);
+    b.onclick = () => {
+      photoPref = !photoPref;
+      if (S.unit) selectUnit(S.unit); else if (S.tower) selectTower(S.tower, S.floor); else goCampus();
+      renderDock();
+    };
+  }
+  if (photoActive()) {
+    const ic: Record<PhotoKind, string> = { day: 'sun', sunset: 'sun', night: 'moon' };
+    $('#dayNight').innerHTML = icon(ic[orbit.kind]) + (orbit.kind === 'sunset' ? '<i class="sunsetdot"></i>' : '');
+    $('#dayNight').onclick = () => {
+      const order: PhotoKind[] = ['day', 'sunset', 'night'];
+      orbit.setKind(order[(order.indexOf(orbit.kind) + 1) % 3]);
+      renderDock();
+    };
+    $('#resetCam').onclick = () => { stopTour(); goCampus(); orbit.spinTo(0); };
+    $('#helpBtn').onclick = () => showGuide();
+    d.classList.toggle('hidden', S.mode === 'balcony');
+    return;
+  }
   $('#dayNight').onclick = () => {
     const target = world.night > 0.5 ? 10 : 19.6;
     const o = { h: world.hour };
@@ -228,7 +288,7 @@ function renderCard() {
         <a class="btn wide wa" id="aWa" href="${waLink(u)}" target="_blank" rel="noopener">${icon('wa')}${t('whatsapp')}</a>
       </div>
     </div>`;
-  $('#cardX').onclick = () => { S.unit = null; S.mode = 'tower'; refreshFloor(); renderCard(); renderCtx(); syncHash(); };
+  $('#cardX').onclick = () => { S.unit = null; S.mode = 'tower'; refreshFloor(); orbit.focus(null); syncPhoto(); renderCard(); renderCtx(); syncHash(); };
   const ab = document.getElementById('aBal');
   if (ab) ab.onclick = () => openBalconyView();
   $('#a3d').onclick = () => openInterior(u.type);
@@ -261,6 +321,7 @@ function towerCam(tw: string, floor?: number | null) {
   return { pos, target };
 }
 function goCampus() {
+  orbit.focus(null);
   realView.close();
   context.clear.value = 40;
   if (S.mode === 'balcony') exitBalcony();
@@ -268,7 +329,7 @@ function goCampus() {
   Object.assign(S, { mode: 'campus', tower: null, floor: null, unit: null });
   campus.slice(null, null);
   campus.showFloorUnits(null, null);
-  world.flyTo(CAMPUS_POS, CAMPUS_TARGET, 2.2);
+  if (!photoActive()) world.flyTo(CAMPUS_POS, CAMPUS_TARGET, 2.2);
   renderAll();
   syncHash();
 }
@@ -282,8 +343,8 @@ function selectTower(tw: string, floor: number | null = null) {
   const best = floor ?? null;
   campus.slice(best ? tw : null, best);
   refreshFloor();
-  const { pos, target } = towerCam(tw, floor);
-  world.flyTo(pos, target, 2.0);
+  if (photoActive()) { const bf = orbit.best[tw]; if (bf != null) orbit.spinTo(bf); orbit.focus(null); }
+  else { const { pos, target } = towerCam(tw, floor); world.flyTo(pos, target, 2.0); }
   renderAll();
   syncHash();
   if (!floor) hint(`${t('floor')} → ${t('units')}`);
@@ -293,8 +354,8 @@ function selectFloor(f: number) {
   S.floor = f; S.unit = null; S.mode = 'tower';
   campus.slice(S.tower, f);
   refreshFloor();
-  const { pos, target } = towerCam(S.tower, f);
-  world.flyTo(pos, target, 1.4, 'power2.inOut');
+  if (!photoActive()) { const { pos, target } = towerCam(S.tower, f); world.flyTo(pos, target, 1.4, 'power2.inOut'); }
+  syncPhoto();
   renderCtx(); renderCard(); rebuildUnitLabels(); syncHash();
 }
 function selectUnit(id: string) {
@@ -308,6 +369,14 @@ function selectUnit(id: string) {
   }
   S.unit = id; S.mode = 'unit';
   refreshFloor();
+  if (photoActive()) {
+    syncPhoto();
+    const bf = orbit.best[id];
+    if (bf != null) orbit.spinTo(bf);
+    orbit.focus(id);
+    renderCtx(); renderCard(); syncHash();
+    return;
+  }
   const [x0, x1, y0, y1] = u.flat.rect;
   const c = toV((x0 + x1) / 2, (y0 + y1) / 2, GH + u.floor * FH);
   const { pos } = towerCam(u.tower, u.floor);
@@ -452,6 +521,7 @@ async function droneTour() {
   renderAll();
   syncHash();
   touring = true;
+  syncPhoto();
   document.body.classList.add('touring');
   world.controls.enabled = false;
   world.controls.autoRotate = false;
@@ -502,6 +572,7 @@ function stopTour() {
   world.stopFlight();
   world.controls.enabled = true;
   document.body.classList.remove('touring');
+  syncPhoto();
   $('#tourCap').classList.add('hidden');
   $('.tourui').classList.add('hidden');
   lastInteract = Date.now();
@@ -916,6 +987,7 @@ function route() {
 
 // ------------------------------------------------------------------ boot
 function renderAll() {
+  syncPhoto();
   renderTabs(); renderCtx(); renderCard(); renderDock(); renderHud();
   rebuildUnitLabels(); updateTowerLabelText();
   ldText.textContent = entered ? ldText.textContent : t('loading');

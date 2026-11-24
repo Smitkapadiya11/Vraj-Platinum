@@ -206,8 +206,11 @@ export class World {
   flight = { t: 0 };
   stopFlight() { gsap.killTweensOf(this.flight); }
 
+  /** true while a full-screen 2D view (photoreal orbit) covers the canvas: skip 3D rendering to save battery */
+  paused = false;
   private loop = () => {
     requestAnimationFrame(this.loop);
+    if (this.paused) { this.clock.getDelta(); return; }
     const raw = this.clock.getDelta();
     const dt = Math.min(raw, 0.1);
     const t = this.clock.elapsedTime;
