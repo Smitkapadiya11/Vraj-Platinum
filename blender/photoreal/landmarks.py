@@ -48,6 +48,7 @@ def mat(name, col, rough=0.7, metal=0.0, emit=None):
 def facade_mat(name, wall, win='#2B3138', storey=3.0, bay=3.4, wfrac=(0.3, 0.8), hfrac=(0.18, 0.82), stripe=None, lit=0.38):
     """box-projected storeys + windows from object coordinates; optional vertical stripe colour every 2 bays"""
     key = 'fac_' + name
+    win_hex = win
     if key in _M:
         return _M[key]
     m = bpy.data.materials.new('lm_' + key)
@@ -96,7 +97,7 @@ def facade_mat(name, wall, win='#2B3138', storey=3.0, bay=3.4, wfrac=(0.3, 0.8),
     nt.links.new(noise.outputs['Fac'], dirt.inputs[0])
     wd = N('ShaderNodeMix'); wd.data_type = 'RGBA'; wd.blend_type = 'MULTIPLY'; wd.inputs['Factor'].default_value = 1.0
     nt.links.new(col_wall, wd.inputs[6]); nt.links.new(dirt.outputs[0], wd.inputs[7])
-    winc = N('ShaderNodeRGB'); winc.outputs[0].default_value = hexc(win)
+    winc = N('ShaderNodeRGB'); winc.outputs[0].default_value = hexc(win_hex)
     fin = N('ShaderNodeMix'); fin.data_type = 'RGBA'
     nt.links.new(w2.outputs[0], fin.inputs['Factor']); nt.links.new(wd.outputs[2], fin.inputs[6]); nt.links.new(winc.outputs[0], fin.inputs[7])
     nt.links.new(fin.outputs[2], b.inputs['Base Color'])
