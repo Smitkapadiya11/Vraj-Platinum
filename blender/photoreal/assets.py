@@ -44,6 +44,7 @@ def import_tree(path, name, height):
     before = set(bpy.data.objects)
     bpy.ops.import_scene.gltf(filepath=path)
     new = [o for o in bpy.data.objects if o not in before]
+    new_names = [o.name for o in new]
     meshes = [o for o in new if o.type == 'MESH']
     if not meshes:
         return None
@@ -64,8 +65,10 @@ def import_tree(path, name, height):
     cx, cy, z0 = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2, min(zs)
     for v in ob.data.vertices:
         v.co = Vector(((v.co.x - cx) * s, (v.co.y - cy) * s, (v.co.z - z0) * s))
-    for o in new:
-        if o != ob and o.name in bpy.data.objects:
+    keep = ob.name
+    for n in new_names:
+        o = bpy.data.objects.get(n)
+        if o is not None and n != keep:
             bpy.data.objects.remove(o)
     ob.name = name + '_ph'
     for c in list(ob.users_collection):
