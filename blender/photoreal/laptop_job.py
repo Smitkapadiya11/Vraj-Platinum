@@ -40,6 +40,11 @@ try:
     bpy.ops.wm.open_mainfile(filepath=scene_path)
     import lighting
     sc = bpy.context.scene
+    if os.environ.get('VP_NOASSETS') != '1':
+        state['stage'] = 'downloading Poly Haven assets'; save()
+        import assets
+        state['assets'] = assets.upgrade(WORK)
+        save()
     # GPU
     prefs = bpy.context.preferences.addons['cycles'].preferences
     used = 'CPU'
