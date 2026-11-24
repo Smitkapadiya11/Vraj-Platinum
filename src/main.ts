@@ -130,7 +130,7 @@ function renderTabs() {
   const el = $('#tabs');
   const on = activeTab();
   el.innerHTML = tabs.map(([k, ic, lb]) => `<button data-k="${k}" class="${k === on ? 'on' : ''}">${icon(ic)}<span>${lb}</span></button>`).join('');
-  el.querySelectorAll<HTMLElement>('button').forEach((b, i) => (b.onclick = tabs[i][3]));
+  el.querySelectorAll<HTMLElement>('button').forEach((b, i) => (b.onclick = () => { $('#guide').classList.add('hidden'); tabs[i][3](); }));
   $('#enqTop').innerHTML = `${icon('wa')}<span>${t('enquire')}</span>`;
   $('#tourSkip').textContent = '■ ' + t('stopTour');
 }
@@ -138,7 +138,7 @@ $('#enqTop').onclick = () => openEnquiry();
 const langSel = $<HTMLSelectElement>('#lang');
 langSel.value = getLang();
 langSel.onchange = () => setLang(langSel.value as Lang);
-onLang(() => { renderAll(); });
+onLang(() => { if (TOUR) for (const id in TOUR) TOUR[id].label = t(`room_${id}` as Parameters<typeof t>[0]); renderAll(); });
 
 // two small floating controls: day/night and reset
 function renderDock() {
@@ -208,8 +208,8 @@ let ctxOpen = !IS_MOBILE;
 function setCtxOpen(v: boolean) {
   ctxOpen = v;
   const c = $('#ctx');
-  if (v) { c.classList.remove('min'); gsap.fromTo(c, { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.32, ease: 'power2.out' }); }
-  else c.classList.add('min');
+  c.style.transform = ''; c.style.opacity = '';   // CSS transition only: inline styles would pin the panel open
+  c.classList.toggle('min', !v);
   renderTabs();
 }
 function ctxHandle() {
@@ -301,7 +301,7 @@ function renderCard() {
   $('#cardX').onclick = () => { S.unit = null; S.mode = 'tower'; refreshFloor(); orbit.focus(null); syncPhoto(); renderCard(); renderCtx(); syncHash(); };
   const ab = document.getElementById('aBal');
   if (ab) ab.onclick = () => openBalconyView('balcony');
-  $('#aTour').onclick = () => openBalconyView('living');
+  $('#aTour').onclick = () => openBalconyView('view');
   $('#a3d').onclick = () => openInterior(u.type);
   $('#aPlan').onclick = () => openPlan(u);
   $('#aCost').onclick = () => openCost(u);
@@ -413,7 +413,7 @@ const tourReady = fetch(`/site/tour/tour.json?v=${__BUILD__}`).then((r) => (r.ok
   const base = IS_MOBILE ? j.mobileBase : j.base;
   TOUR = {};
   for (const [id, n] of Object.entries<{ label: string; hs: TourNode['hs'] }>(j.nodes)) {
-    TOUR[id] = { id, label: n.label, hs: n.hs, src: `${base}/${id}.jpg?v=${j.v}`, thumb: `${j.thumbBase}/${id}.jpg?v=${j.v}` };
+    TOUR[id] = { id, label: t(`room_${id}` as Parameters<typeof t>[0]) || n.label, hs: n.hs, src: `${base}/${id}.jpg?v=${j.v}`, thumb: `${j.thumbBase}/${id}.jpg?v=${j.v}` };
   }
   // warm the first image so the balcony opens instantly
   new Image().src = TOUR.balcony?.thumb ?? '';
@@ -485,6 +485,7 @@ function closeOverlayMode() {
 function renderHud(type?: string) {
   const h = $('#hud'), chips = $('#chips');
   document.body.classList.toggle('bal', S.mode === 'balcony');
+  document.body.classList.toggle('interior', S.mode === 'interior');
   if (S.mode === 'balcony') {
     h.classList.remove('hidden');
     chips.classList.toggle('hidden', !IS_MOBILE || !realView.active);
@@ -669,18 +670,19 @@ world.onTick(() => {
     }
     pts.sort((a, b) => b.y - a.y);
     const done: typeof pts = [];
+    const hits = (x: number, y: number, p: (typeof pts)[0]) => done.some((q) => Math.abs(q.x - x) < (q.w + p.w) / 2 + 2 && Math.abs(q.y - y) < (q.h + p.h) / 2 + 2);
     for (const p of pts) {
-      for (let k = 0; k < 8; k++) {
-        const hit = done.find((q) => Math.abs(q.x - p.x) < (q.w + p.w) / 2 + 2 && Math.abs(q.y - p.y) < (q.h + p.h) / 2 + 2);
-        if (!hit) break;
-        p.y = hit.y - (hit.h + p.h) / 2 - 3;
-      }
+      const dx = p.w + 4, dy = p.h + 4;
+      const slot = [[0, 0], [0, -dy], [dx, 0], [-dx, 0], [dx, -dy], [-dx, -dy], [0, -2 * dy], [2 * dx, 0], [-2 * dx, 0]].find(([ox, oy]) => !hits(p.x + ox, p.y + oy, p)) || [0, 0];
+      p.x += slot[0]; p.y += slot[1];
+      p.x = Math.min(Math.max(p.x, p.w / 2 + 4), w - p.w / 2 - 4);
+      p.y = Math.min(Math.max(p.y, 70), h - 90);
       done.push(p);
       p.el.style.transform = `translate(${ax}%,${ay}%) translate(${p.x}px, ${p.y}px)`;
     }
   };
   place(towerLabels, S.mode === 'campus' && entered, -50, -100);
-  place(unitLabelEls, true, -50, -50);
+  place(unitLabelEls, !(IS_MOBILE && S.unit), -50, -50);
   if (S.mode !== 'balcony') {
     const cmp = document.getElementById('cmpN')?.parentElement;
     if (cmp) {

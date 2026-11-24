@@ -1,5 +1,5 @@
 {
- "v": 1795523045,
+ "v": 1795543982,
  "base": "/site/tour/d",
  "mobileBase": "/site/tour/m",
  "thumbBase": "/site/tour/t",
@@ -8,9 +8,24 @@
    "label": "Balcony",
    "hs": [
     {
+     "to": "view",
+     "u": 0.98981,
+     "v": 0.75388
+    }
+   ]
+  },
+  "view": {
+   "label": "Living room \u00b7 balcony view",
+   "hs": [
+    {
+     "to": "balcony",
+     "u": 0.48981,
+     "v": 0.75388
+    },
+    {
      "to": "living",
-     "u": 0.96624,
-     "v": 0.60827
+     "u": 0.95395,
+     "v": 0.65659
     }
    ]
   },
@@ -18,9 +33,9 @@
    "label": "Living room",
    "hs": [
     {
-     "to": "balcony",
-     "u": 0.46624,
-     "v": 0.6048
+     "to": "view",
+     "u": 0.45395,
+     "v": 0.65198
     },
     {
      "to": "dining",

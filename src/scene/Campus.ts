@@ -53,7 +53,7 @@ const GH = SITE.groundH, FH = SITE.floorH, NF = SITE.floors;
 export const toV = (e: number, n: number, y = 0) => new THREE.Vector3(e, y, -n);
 export const STATUS_COLOR = { available: 0x2fbf71, hold: 0xf0a43a, sold: 0xd9534f } as const;
 
-interface FloorStack { block: BlockDef; meshes: THREE.InstancedMesh[]; roof: THREE.Object3D; ghost: THREE.Mesh }
+interface FloorStack { block: BlockDef; meshes: THREE.InstancedMesh[]; roof: THREE.Object3D; ghost: THREE.Mesh; caps?: THREE.Mesh[] }
 
 export class Campus {
   root = new THREE.Group();
@@ -167,6 +167,7 @@ export class Campus {
     for (const block of SITE.blocks) {
       const floorNode = get(`${block.id}_floor`);
       const meshes: THREE.InstancedMesh[] = [];
+      const caps: THREE.Mesh[] = [];
       this.eachMesh(floorNode, (m) => {
         const mat = m.material as THREE.MeshStandardMaterial;
         this.tuneMaterial(mat);
@@ -181,6 +182,16 @@ export class Campus {
         im.frustumCulled = false;
         meshes.push(im);
         this.root.add(im);
+        // cap above the 14th floor: every floor's balcony ceiling, fascia and fin tops come from the floor above,
+        // so the top floor needs the lower band of one more module (clipped just above its slab)
+        const capMat = mat.clone();
+        capMat.clippingPlanes = [new THREE.Plane(new THREE.Vector3(0, -1, 0), GH + NF * FH + 0.13)];
+        const cap = new THREE.Mesh(m.geometry, capMat);
+        cap.matrixAutoUpdate = false;
+        cap.matrix.copy(new THREE.Matrix4().makeTranslation(0, GH + NF * FH, 0).multiply(m.matrixWorld));
+        cap.castShadow = true; cap.receiveShadow = true;
+        caps.push(cap);
+        this.root.add(cap);
       });
       const ground = get(`${block.id}_ground`);
       this.eachMesh(ground, (m) => {
@@ -216,7 +227,7 @@ export class Campus {
       ghost.add(edges);
       ghost.visible = false;
       this.root.add(ghost);
-      this.stacks.push({ block, meshes, roof, ghost });
+      this.stacks.push({ block, meshes, roof, ghost, caps });
     }
   }
 
@@ -297,6 +308,7 @@ export class Campus {
         im.count = pf ? pf.filter((f) => f <= n - (active ? 1 : 0)).length : n;
       }
       s.roof.visible = !active;
+      s.caps?.forEach((c) => (c.visible = !active));
       s.ghost.visible = active;
       if (active) {
         const top = GH + n * FH, full = GH + NF * FH + 1.5;

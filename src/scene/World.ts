@@ -49,6 +49,7 @@ export class World {
     this.renderer.toneMappingExposure = 1;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.shadowMap.enabled = !LITE;
+    this.renderer.localClippingEnabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
     this.camera = new THREE.PerspectiveCamera(IS_MOBILE ? 50 : 38, innerWidth / innerHeight, 0.05, 9000);

@@ -13,13 +13,14 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'public', 'site', 'tour')
 nodes = json.load(open(nodes_p))
 LINKS = {
-    'balcony': ['living'],
-    'living': ['balcony', 'dining'],
+    'balcony': ['view'],
+    'view': ['balcony', 'living'],
+    'living': ['view', 'dining'],
     'dining': ['living', 'master', 'bed2'],
     'master': ['dining', 'bed2'],
     'bed2': ['dining', 'master'],
 }
-ORDER = ['balcony', 'living', 'dining', 'master', 'bed2']
+ORDER = ['balcony', 'view', 'living', 'dining', 'master', 'bed2']
 env = cv2.imread(env_p).astype(np.float32)
 for sub in ('d', 'm', 't'):
     os.makedirs(os.path.join(OUT, sub), exist_ok=True)
