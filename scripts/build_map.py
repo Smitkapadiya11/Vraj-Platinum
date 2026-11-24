@@ -53,8 +53,8 @@ PAL = {
     'turf2':     (120, 156, 92),
     'court':     (70, 128, 86),
     'bank':      (170, 180, 140),
-    'water':     (94, 150, 160),
-    'water2':    (80, 136, 150),
+    'water':     (146, 134, 104),   # dry nallah bed (no water on site, Google Maps 2026)
+    'water2':    (118, 116, 84),
     'verge':     (214, 206, 190),
     'curb':      (236, 233, 224),
     'asphalt':   (92, 94, 98),

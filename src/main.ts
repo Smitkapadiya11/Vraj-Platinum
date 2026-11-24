@@ -114,15 +114,15 @@ function activeTab() {
   if (touring) return 'drone';
   if (S.mode === 'balcony') return 'balcony';
   if ($('#modal').classList.contains('on')) return modalTab;
-  return 'explore';
+  return ctxOpen ? 'homes' : 'explore';
 }
 let modalTab = '';
 function renderTabs() {
   const tabs: [string, string, string, () => void][] = [
-    ['explore', 'cube', t('tabExplore'), () => { closeModal(); stopTour(); goCampus(); }],
+    ['explore', 'cube', t('tabExplore'), () => { closeModal(); stopTour(); goCampus(); if (IS_MOBILE && ctxOpen) setCtxOpen(false); }],
     ['drone', 'drone', t('tabDrone'), () => { closeModal(); droneTour(); }],
     ['balcony', 'eye', t('tabBalcony'), () => { closeModal(); openBalconyView(); }],
-    ['homes', 'home', t('tabHomes'), () => { stopTour(); openResidences(); }],
+    ['homes', 'home', t('tabHomes'), () => { stopTour(); if ($('#modal').classList.contains('on')) closeModal(); if (S.mode === 'balcony') { exitBalcony(); } setCtxOpen(!ctxOpen); }],
     ['more', 'menu', t('tabMore'), () => { stopTour(); openMore(); }],
   ];
   const el = $('#tabs');
@@ -144,18 +144,6 @@ function renderDock() {
   d.innerHTML = `<button class="fab" id="dayNight" title="${t('dayNight')}" aria-label="${t('dayNight')}">${icon(world.night > 0.5 ? 'sun' : 'moon')}</button>
     <button class="fab" id="resetCam" title="${t('reset')}" aria-label="${t('reset')}">${icon('reset')}</button>
     <button class="fab" id="helpBtn" title="${t('howTo')}" aria-label="${t('howTo')}">${icon('help')}</button>`;
-  if (orbit.ready) {
-    const b = document.createElement('button');
-    b.className = 'fab txt'; b.id = 'viewToggle';
-    b.textContent = photoPref ? '3D' : '📷';
-    b.title = photoPref ? 'Live 3D' : 'Photoreal';
-    d.prepend(b);
-    b.onclick = () => {
-      photoPref = !photoPref;
-      if (S.unit) selectUnit(S.unit); else if (S.tower) selectTower(S.tower, S.floor); else goCampus();
-      renderDock();
-    };
-  }
   if (photoActive()) {
     const ic: Record<PhotoKind, string> = { day: 'sun', sunset: 'sun', night: 'moon' };
     $('#dayNight').innerHTML = icon(ic[orbit.kind]) + (orbit.kind === 'sunset' ? '<i class="sunsetdot"></i>' : '');
@@ -214,7 +202,26 @@ const towerInfo = (tw: string) => {
   const types = [...new Set(us.map((u) => u.type))].join(' · ');
   return { avail: us.filter((u) => u.status === 'available').length, total: us.length, types };
 };
+let ctxOpen = !IS_MOBILE;
+function setCtxOpen(v: boolean) {
+  ctxOpen = v;
+  const c = $('#ctx');
+  if (v) { c.classList.remove('min'); gsap.fromTo(c, { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.32, ease: 'power2.out' }); }
+  else c.classList.add('min');
+  renderTabs();
+}
+function ctxHandle() {
+  const c = $('#ctx');
+  c.querySelectorAll('.ctx-min').forEach((x) => x.remove());
+  const h = document.createElement('button');
+  h.className = 'ctx-min'; h.setAttribute('aria-label', t('close'));
+  h.innerHTML = '<i></i>';
+  h.onclick = () => setCtxOpen(false);
+  c.prepend(h);
+  c.classList.toggle('min', !ctxOpen);
+}
 function renderCtx() {
+  queueMicrotask(ctxHandle);
   const c = $('#ctx');
   c.classList.remove('hidden');
   if (S.mode === 'balcony' || S.mode === 'interior') { c.classList.add('hidden'); return; }
@@ -337,6 +344,7 @@ function goCampus() {
 }
 function selectTower(tw: string, floor: number | null = null) {
   stopTour();
+  if (!ctxOpen) setCtxOpen(true);
   realView.close();
   context.clear.value = 40;
   if (S.mode === 'balcony') exitBalcony();
@@ -949,6 +957,7 @@ function openEnquiry() {
 function openMore() {
   modalTab = 'more';
   const items: [string, string, () => void][] = [
+    ['home', t('allHomes'), () => openResidences()],
     ['img', t('sampleFlat'), () => openSampleFlat()],
     ['img', t('gallery'), () => openGallery()],
     ['pin', t('location'), () => openLocation()],

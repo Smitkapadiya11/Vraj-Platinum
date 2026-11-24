@@ -314,6 +314,78 @@ def eucalyptus(proto_name='TREE_r_ph'):
     return n
 
 
+GE = {  # traced on Google Earth / Esri imagery, context coords (x east, y SOUTH): Blender y = -y
+    'turf1': [[170.5, 115.3], [105.3, 97.4], [111.5, 45.2], [179.3, 58.3]],
+    'turf2': [[178.8, 54.6], [110.1, 38.7], [121.6, -14.5], [191.8, -5.9]],
+    'courts': [[230.0, 62.7], [182.7, 51.9], [189.3, 16.8], [237.6, 25.7]],
+}
+
+
+def _poly(k):
+    return [Vector((x, -y)) for x, y in GE[k]]
+
+
+def _strip(name, a, b, w, h, m, z0=0.0):
+    d = b - a
+    L = d.length
+    c = (a + b) / 2
+    return box(name, c.x, c.y, L, w, z0, z0 + h, m, math.atan2(d.y, d.x))
+
+
+def near_front():
+    """what you see right below the balcony: hedge-walled party-plot lawns, palm lane, netted box-cricket cage"""
+    hedge = mat('hedge', '#3E5A2C', 0.9)
+    n = 0
+    for k in ('turf1', 'turf2'):
+        P = _poly(k)
+        c = sum(P, Vector((0, 0))) / len(P)
+        P = [c + (p - c) * 1.06 for p in P]
+        for i in range(len(P)):
+            a, b = P[i], P[(i + 1) % len(P)]
+            if k == 'turf2' and i == 1:   # gate side stays open
+                mid = (a + b) / 2
+                _strip(f'hedge_{k}{i}a', a, mid - (b - a).normalized() * 6, 1.4, 2.6, hedge)
+                _strip(f'hedge_{k}{i}b', mid + (b - a).normalized() * 6, b, 1.4, 2.6, hedge)
+            else:
+                _strip(f'hedge_{k}{i}', a, b, 1.4, 2.6, hedge)
+            n += 1
+    palm = bpy.data.meshes.get('palm')
+    if palm:
+        A, B = _poly('turf1')[2], _poly('turf1')[3]      # lane between the two lawns
+        L = (B - A).length
+        for i in range(int(L // 7) + 1):
+            p = A + (B - A) * (i * 7 / L) + Vector((0, -2.5))
+            o = bpy.data.objects.new(f'palm_lane{i}', palm)
+            o.location = (p.x, p.y, 0); o.rotation_euler = (0, 0, i * 1.3)
+            link(o)
+    # BMR box cricket: steel poles + green net on all sides and roof
+    P = _poly('courts')
+    pole = mat('pole', '#5E6266', 0.5, 0.7)
+    net = bpy.data.materials.new('lm_net'); net.use_nodes = True
+    nb = net.node_tree.nodes['Principled BSDF']
+    nb.inputs['Base Color'].default_value = hexc('#2F4A3A'); nb.inputs['Alpha'].default_value = 0.32; nb.inputs['Roughness'].default_value = 0.9
+    try:
+        net.surface_render_method = 'BLENDED'
+    except Exception:
+        pass
+    H = 9.0
+    for i in range(len(P)):
+        a, b = P[i], P[(i + 1) % len(P)]
+        L = (b - a).length
+        for k in range(int(L // 8) + 1):
+            q = a + (b - a) * (k * 8 / L)
+            cyl(f'cage_pole{i}_{k}', q.x, q.y, 0.12, 0, H, pole, seg=8)
+        _strip(f'cage_net{i}', a, b, 0.05, H, net)
+        _strip(f'cage_rail{i}', a, b, 0.2, 0.2, pole, H - 0.2)
+    me = bpy.data.meshes.new('cage_roof')
+    bm = bmesh.new()
+    vs = [bm.verts.new((p.x, p.y, H)) for p in P]
+    bm.faces.new(vs); bm.to_mesh(me); bm.free()
+    me.materials.append(net)
+    link(bpy.data.objects.new('cage_roof', me))
+    return n
+
+
 def build():
     global COLL
     COLL = bpy.data.collections.get('LANDMARKS') or bpy.data.collections.new('LANDMARKS')
@@ -322,8 +394,8 @@ def build():
     for o in list(COLL.objects):
         bpy.data.objects.remove(o)
     twin_towers(); under_construction(); future_corner(); far_towers()
-    nh = houses(); party_plot(); ne = eucalyptus()
-    return {'objects': len(COLL.objects), 'houses': nh, 'eucalyptus': ne}
+    nh = houses(); party_plot(); ne = eucalyptus(); nf = near_front()
+    return {'objects': len(COLL.objects), 'houses': nh, 'eucalyptus': ne, 'hedges': nf}
 
 
 def balcony_camera(name='cam_b1402', lens=16.0):
