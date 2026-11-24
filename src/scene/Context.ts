@@ -10,7 +10,7 @@ import ctx from '../data/context.json';
  * Facades are drawn procedurally in the shader (floor bands, window grid, stilt parking, coping) so they stay
  * crisp at any distance — no photo textures. Towers get rooftop solar rows + a lift/water-tank room.
  */
-type Rec = [number[], number, number, number];
+type Rec = [number[], number, number, number, string?];
 
 const GH = 3.6, FH = 3.0, PARAPET = 1.0;
 
@@ -41,7 +41,7 @@ export class Context {
     const q = new THREE.Quaternion(), e = new THREE.Euler();
     let bi = 0;
 
-    for (const [ring, h, lv, kind] of ctx as unknown as Rec[]) {
+    for (const [ring, h, lv, kind, hex] of ctx as unknown as Rec[]) {
       bi++;
       const seed = hash(bi);
       const pts: THREE.Vector2[] = [];
@@ -52,7 +52,8 @@ export class Context {
       const sgn = A > 0 ? 1 : -1;
       // warm off-white with gentle per-building variation; sheds a cooler light grey
       if (kind === 1) col.setRGB(0.86, 0.87, 0.87, THREE.SRGBColorSpace);
-      else col.setHSL(0.09 + (seed - 0.5) * 0.03, 0.16 + seed * 0.12, 0.86 + (hash(bi + 7) - 0.5) * 0.06, THREE.SRGBColorSpace);
+      else if (hex) col.set(hex);   // real landmark colour (scripts/add_landmarks.py)
+      else col.setHSL(0.09 + (seed - 0.5) * 0.04, 0.2 + seed * 0.16, 0.8 + (hash(bi + 7) - 0.5) * 0.08, THREE.SRGBColorSpace); // Surat cream/beige plaster
       const top = h + (kind === 1 ? 0.4 : PARAPET);
 
       let u = Math.floor(seed * 5) * 1.7;

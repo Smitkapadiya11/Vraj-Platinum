@@ -47,6 +47,8 @@ for (const block of SITE.blocks) {
     }
   }
 }
+// floor lists read 1401, 1402, 1403, 1404 like the brochure's typical layout plan
+UNITS.sort((a, b) => a.tower.localeCompare(b.tower) || a.floor - b.floor || a.no.localeCompare(b.no));
 export const UNIT_BY_ID = new Map(UNITS.map((u) => [u.id, u]));
 export const TOWERS = ['A', 'B', 'C', 'D', 'E', 'F'];
 export const blockOfTower = (t: string) => SITE.blocks.find((b) => b.towers.includes(t))!;

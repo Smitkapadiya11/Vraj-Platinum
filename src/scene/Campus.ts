@@ -317,18 +317,18 @@ export class Campus {
       // translucent plate on the exposed (sliced) floor top + a light volume rising from it
       const g = new THREE.BoxGeometry(x1 - x0 - 0.2, 0.22, y1 - y0 - 0.2);
       const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({
-        color: STATUS_COLOR[u.status], transparent: true, opacity: sel ? 0.95 : hov ? 0.85 : 0.7, depthWrite: false,
+        color: STATUS_COLOR[u.status], transparent: true, opacity: sel ? 0.92 : hov ? 0.8 : 0.58, depthWrite: false,
       }));
       const top = GH + floor * FH;
       m.position.copy(toV((x0 + x1) / 2, (y0 + y1) / 2, top + 0.14));
       m.renderOrder = 5;
       m.userData.unit = u.id;
-      const e = new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: sel ? 0xffffff : 0x0d1117, transparent: true, opacity: sel ? 1 : 0.5, depthTest: false }));
+      const e = new THREE.LineSegments(new THREE.EdgesGeometry(g), new THREE.LineBasicMaterial({ color: sel || hov ? 0xffffff : STATUS_COLOR[u.status], transparent: true, opacity: sel ? 1 : 0.9, depthTest: false }));
       e.renderOrder = 6;
       m.add(e);
       if (sel || hov) {
         const vg = new THREE.BoxGeometry(x1 - x0 + 0.4, FH, y1 - y0 + 0.4);
-        const v = new THREE.Mesh(vg, new THREE.MeshBasicMaterial({ color: sel ? 0xffffff : STATUS_COLOR[u.status], transparent: true, opacity: sel ? 0.16 : 0.1, depthWrite: false }));
+        const v = new THREE.Mesh(vg, new THREE.MeshBasicMaterial({ color: STATUS_COLOR[u.status], transparent: true, opacity: sel ? 0.3 : 0.16, depthWrite: false }));
         v.position.y = FH / 2;
         const ve = new THREE.LineSegments(new THREE.EdgesGeometry(vg), new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9 }));
         v.add(ve);

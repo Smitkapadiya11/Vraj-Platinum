@@ -434,3 +434,26 @@ body:not(.bal) #tourHs { display: none; }
 @media (min-width: 721px) { .ctx-min i { transform: translateX(2px) rotate(135deg); } }
 @media (max-width: 720px) { #ctx { max-height: 44vh; } }
 #tabs button[data-k="homes"].on { color: #fff; }
+
+/* ---------------------------------------------------------------- legibility fixes */
+/* Indic scripts break when letters are spaced apart */
+html:lang(gu) .eyebrow, html:lang(hi) .eyebrow, html:lang(gu) .step-l, html:lang(hi) .step-l { letter-spacing: 0; text-transform: none; }
+.tower-card .ty { white-space: nowrap; display: block; overflow: hidden; text-overflow: ellipsis; }
+.tower-card b { display: block; }
+/* flat markers on the cut floor: number + status, colour-coded */
+.ulabel { flex-direction: column; gap: 1px; padding: 5px 9px; border-radius: 10px; line-height: 1.1; min-width: 52px; text-align: center;
+  background: rgba(10,14,20,.78); border: 1.5px solid rgba(255,255,255,.5); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 4px 14px rgba(0,0,0,.35); transition: transform .18s; cursor: pointer; }
+.ulabel b { font-size: 13px; letter-spacing: .02em; }
+.ulabel span { font-size: 10px; font-weight: 600; opacity: .92; }
+.ulabel.s-available { border-color: #2fbf71; } .ulabel.s-available span { color: #7be3a6; }
+.ulabel.s-hold { border-color: #f0a43a; } .ulabel.s-hold span { color: #ffd08a; }
+.ulabel.s-sold { border-color: #d9534f; } .ulabel.s-sold span { color: #ff9a96; }
+.ulabel.on, .ulabel:hover { transform: scale(1.12); background: #fff; color: #111; }
+.ulabel.on span, .ulabel:hover span { color: #333; }
+/* 360 HUD: title row with the close button, room chips use the full width below */
+body.bal #hud { flex-wrap: wrap; position: relative; }
+body.bal #hud > div { flex: 1 1 100%; min-width: 0; }
+body.bal #hud h3 { padding-right: 96px; overflow-wrap: anywhere; }
+body.bal #hud .exitb { position: absolute; top: 12px; right: 12px; }
+#hud h3, #ctx h2, #card h3 { overflow-wrap: anywhere; }

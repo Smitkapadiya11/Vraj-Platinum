@@ -8,6 +8,7 @@ import { Context } from './scene/Context';
 import { Trees } from './scene/Trees';
 import { Interior } from './scene/Interior';
 import { RealView, type TourNode } from './scene/RealView';
+import { buildLandmarks } from './scene/Landmarks';
 import { PhotoOrbit, type Kind as PhotoKind } from './scene/PhotoOrbit';
 import { SITE, PROJECT, PLANS, GALLERY, SAMPLE_FLAT, PLAN_IMG } from './data/project';
 import { UNITS, UNIT_BY_ID, TOWERS, DIR_NAME, unitsOf, type Unit } from './data/units';
@@ -27,13 +28,14 @@ const context = new Context();
 world.scene.add(context.group);
 const trees = new Trees(IS_MOBILE);
 world.scene.add(trees.group);
+world.scene.add(buildLandmarks());
 const interior = new Interior(world, $('#roomLabels'));
 const realView = new RealView(world);
 // photoreal orbit (pre-rendered Cycles frames); falls back to live 3D when the renders aren't deployed
 const orbit = new PhotoOrbit(document.body);
 let photoPref = false;
 orbit.statusOf = (id) => UNIT_BY_ID.get(id)?.status ?? 'available';
-orbit.load(`/pr/manifest.json?v=${__BUILD__}`).then(() => { photoPref = true; syncPhoto(); renderDock(); }).catch(() => {});
+
 orbit.onPick = (id) => {
   if (id) { selectUnit(id); return; }
   if (S.unit) { S.unit = null; S.mode = S.tower ? 'tower' : 'campus'; orbit.focus(null); syncPhoto(); renderCtx(); renderCard(); syncHash(); }
@@ -234,7 +236,7 @@ function renderCtx() {
       <div class="stat-row"><span><b>6</b> towers</span><span><b>G+14</b></span><span><b>336</b> homes</span><span><b>${av}</b> ${t('available').toLowerCase()}</span></div>
       <div id="ctx-body">
         <div class="eyebrow step-l" style="margin-top:12px">${t('chooseTower')}</div>
-        <div class="tower-grid">${TOWERS.map((tw) => { const i = towerInfo(tw); return `<button class="tower-card" data-t="${tw}"><b>${tw}</b><span>Type ${i.types}</span><br><span><span class="dot available"></span> ${i.avail}/${i.total}</span></button>`; }).join('')}</div>
+        <div class="tower-grid">${TOWERS.map((tw) => { const i = towerInfo(tw); return `<button class="tower-card" data-t="${tw}"><b>${tw}</b><span class="ty">${t('type')} ${i.types.replace(/ · /g, '+')}</span><br><span><span class="dot available"></span> ${i.avail}/${i.total}</span></button>`; }).join('')}</div>
         <div class="legend"><span><i class="dot available"></i>${t('available')}</span><span><i class="dot hold"></i>${t('hold')}</span><span><i class="dot sold"></i>${t('sold')}</span>${PROJECT.commercial.demoInventory ? '<span style="opacity:.7">· demo availability</span>' : ''}</div>
       </div>`;
     c.querySelectorAll<HTMLElement>('.tower-card').forEach((b) => (b.onclick = () => selectTower(b.dataset.t!)));
@@ -627,7 +629,7 @@ function buildTowerLabels() {
     el.onclick = () => selectTower(tw);
     labelLayer.appendChild(el);
     const p = campus.towerCenter(tw);
-    towerLabels.push({ el, tw, pos: new THREE.Vector3(p.x, GH + NF * FH + 9, p.z) });
+    towerLabels.push({ el, tw, pos: new THREE.Vector3(p.x, GH + NF * FH + 3.5, p.z) });
   }
   updateTowerLabelText();
 }
@@ -645,7 +647,8 @@ function rebuildUnitLabels() {
   for (const u of unitsOf(S.tower, S.floor)) {
     const el = document.createElement('button');
     el.className = 'ulabel';
-    el.innerHTML = `<i class="dot ${u.status}"></i>${u.id.split('-')[1]} · ${u.type}`;
+    el.className = `ulabel s-${u.status}${u.id === S.unit ? ' on' : ''}`;
+    el.innerHTML = `<b>${u.id.split('-')[1]}</b><span>${t(u.status)}</span>`;
     el.onclick = () => selectUnit(u.id);
     labelLayer.appendChild(el);
     const [x0, x1, y0, y1] = u.flat.rect;
@@ -655,18 +658,29 @@ function rebuildUnitLabels() {
 const pv = new THREE.Vector3();
 world.onTick(() => {
   const w = innerWidth, h = innerHeight;
-  const showT = S.mode === 'campus' && entered;
-  for (const l of towerLabels) {
-    pv.copy(l.pos).project(world.camera);
-    const on = showT && pv.z < 1;
-    l.el.style.display = on ? '' : 'none';
-    if (on) l.el.style.transform = `translate(-50%,-100%) translate(${(pv.x * 0.5 + 0.5) * w}px, ${(-pv.y * 0.5 + 0.5) * h}px)`;
-  }
-  for (const l of unitLabelEls) {
-    pv.copy(l.pos).project(world.camera);
-    l.el.style.transform = `translate(-50%,-50%) translate(${(pv.x * 0.5 + 0.5) * w}px, ${(-pv.y * 0.5 + 0.5) * h}px)`;
-    l.el.style.display = pv.z < 1 ? '' : 'none';
-  }
+  // labels never sit on top of each other: project, then push overlapping ones apart vertically
+  const place = (ls: { el: HTMLElement; pos: THREE.Vector3 }[], show: boolean, ax: number, ay: number) => {
+    const pts: { el: HTMLElement; x: number; y: number; z: number; w: number; h: number }[] = [];
+    for (const l of ls) {
+      pv.copy(l.pos).project(world.camera);
+      const on = show && pv.z < 1;
+      l.el.style.display = on ? '' : 'none';
+      if (on) pts.push({ el: l.el, x: (pv.x * 0.5 + 0.5) * w, y: (-pv.y * 0.5 + 0.5) * h, z: pv.z, w: l.el.offsetWidth || 40, h: l.el.offsetHeight || 30 });
+    }
+    pts.sort((a, b) => b.y - a.y);
+    const done: typeof pts = [];
+    for (const p of pts) {
+      for (let k = 0; k < 8; k++) {
+        const hit = done.find((q) => Math.abs(q.x - p.x) < (q.w + p.w) / 2 + 2 && Math.abs(q.y - p.y) < (q.h + p.h) / 2 + 2);
+        if (!hit) break;
+        p.y = hit.y - (hit.h + p.h) / 2 - 3;
+      }
+      done.push(p);
+      p.el.style.transform = `translate(${ax}%,${ay}%) translate(${p.x}px, ${p.y}px)`;
+    }
+  };
+  place(towerLabels, S.mode === 'campus' && entered, -50, -100);
+  place(unitLabelEls, true, -50, -50);
   if (S.mode !== 'balcony') {
     const cmp = document.getElementById('cmpN')?.parentElement;
     if (cmp) {
