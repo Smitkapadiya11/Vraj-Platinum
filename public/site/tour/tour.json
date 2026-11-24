@@ -1,0 +1,83 @@
+{
+ "v": 1795523045,
+ "base": "/site/tour/d",
+ "mobileBase": "/site/tour/m",
+ "thumbBase": "/site/tour/t",
+ "nodes": {
+  "balcony": {
+   "label": "Balcony",
+   "hs": [
+    {
+     "to": "living",
+     "u": 0.96624,
+     "v": 0.60827
+    }
+   ]
+  },
+  "living": {
+   "label": "Living room",
+   "hs": [
+    {
+     "to": "balcony",
+     "u": 0.46624,
+     "v": 0.6048
+    },
+    {
+     "to": "dining",
+     "u": 0.6958,
+     "v": 0.6581
+    }
+   ]
+  },
+  "dining": {
+   "label": "Kitchen & dining",
+   "hs": [
+    {
+     "to": "living",
+     "u": 0.1958,
+     "v": 0.6581
+    },
+    {
+     "to": "master",
+     "u": 0.77012,
+     "v": 0.67527
+    },
+    {
+     "to": "bed2",
+     "u": 0.80508,
+     "v": 0.60154
+    }
+   ]
+  },
+  "master": {
+   "label": "Master bedroom",
+   "hs": [
+    {
+     "to": "dining",
+     "u": 0.27012,
+     "v": 0.67527
+    },
+    {
+     "to": "bed2",
+     "u": 0.84358,
+     "v": 0.68903
+    }
+   ]
+  },
+  "bed2": {
+   "label": "Bedroom 2",
+   "hs": [
+    {
+     "to": "dining",
+     "u": 0.30508,
+     "v": 0.60154
+    },
+    {
+     "to": "master",
+     "u": 0.34358,
+     "v": 0.68903
+    }
+   ]
+  }
+ }
+}

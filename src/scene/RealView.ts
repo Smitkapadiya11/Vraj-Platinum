@@ -7,6 +7,8 @@ import { IS_MOBILE } from './World';
  * Real-photo balcony viewer: a stitched site panorama (or single photo) wrapped on the inside of a
  * cylinder at its true angular width, so the buyer can drag / swipe / pinch — or move the phone — to look around.
  */
+export interface TourNode { id: string; label: string; src: string; thumb: string; hs: { to: string; u: number; v: number }[] }
+
 export class RealView {
   scene = new THREE.Scene();
   camera = new THREE.PerspectiveCamera(IS_MOBILE ? 64 : 55, innerWidth / innerHeight, 0.1, 100);
@@ -19,9 +21,18 @@ export class RealView {
   private loader = new THREE.TextureLoader();
   private gyro?: { a0: number; b0: number; yaw0: number; pitch0: number };
   onLoad?: (ok: boolean) => void;
+  /** walkthrough tour: several equirect nodes joined by floor hotspots */
+  tour?: { nodes: Record<string, TourNode>; cur: string };
+  onNode?: (id: string) => void;
+  private hsLayer: HTMLElement;
+  private texCache = new Map<string, Promise<THREE.Texture | null>>();
+  private moving = false;
 
   constructor(private world: World) {
     this.scene.background = new THREE.Color(0x0b0f14);
+    this.hsLayer = document.createElement('div');
+    this.hsLayer.id = 'tourHs';
+    document.body.appendChild(this.hsLayer);
     const c = world.canvas;
     c.addEventListener('pointerdown', (e) => { if (this.active) { this.drag = { x: e.clientX, y: e.clientY, yaw: this.tYaw, pitch: this.tPitch }; c.setPointerCapture(e.pointerId); } });
     c.addEventListener('pointermove', (e) => {
@@ -44,7 +55,7 @@ export class RealView {
     world.onTick(() => this.update());
   }
 
-  private maxFov() { return this.full ? (IS_MOBILE ? 90 : 85) : Math.min(IS_MOBILE ? 78 : 70, THREE.MathUtils.radToDeg(this.vspan) * 0.98); }
+  private maxFov() { return this.full ? (IS_MOBILE ? (this.camera.aspect < 1 ? 108 : 90) : 85) : Math.min(IS_MOBILE ? 78 : 70, THREE.MathUtils.radToDeg(this.vspan) * 0.98); }
 
   private clamp() {
     const hf = THREE.MathUtils.degToRad(this.tFov) / 2;
@@ -129,7 +140,159 @@ export class RealView {
     this.clamp();
   };
 
+  // ---------------------------------------------------------------- walkthrough tour
+  private tex(src: string) {
+    let p = this.texCache.get(src);
+    if (!p) {
+      p = new Promise<THREE.Texture | null>((res) => this.loader.load(src, (t) => {
+        t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; res(t);
+      }, undefined, () => res(null)));
+      this.texCache.set(src, p);
+    }
+    return p;
+  }
+
+  private sphere(tex: THREE.Texture, opacity = 1) {
+    const g = new THREE.SphereGeometry(10, 96, 64);
+    g.scale(-1, 1, 1);
+    const m = new THREE.Mesh(g, new THREE.MeshBasicMaterial({ map: tex, toneMapped: false, transparent: opacity < 1, opacity, depthWrite: false }));
+    m.rotation.y = -Math.PI / 2;
+    return m;
+  }
+
+  private setMesh(m: THREE.Mesh) {
+    if (this.mesh && this.mesh !== m) {
+      this.scene.remove(this.mesh); this.mesh.geometry.dispose();
+      (this.mesh.material as THREE.Material).dispose();
+    }
+    this.mesh = m;
+    if (!m.parent) this.scene.add(m);
+  }
+
+  /** open the tour at a node: the small preview appears at once, the sharp image replaces it when loaded */
+  async openTour(nodes: Record<string, TourNode>, start: string) {
+    this.full = true;
+    this.active = true;
+    this.tour = { nodes, cur: start };
+    this.world.controls.enabled = false;
+    this.world.overrideScene = { scene: this.scene, camera: this.camera };
+    this.world.overrideResize = (w, h) => { this.camera.aspect = w / h; this.camera.updateProjectionMatrix(); this.clamp(); };
+    this.camera.aspect = innerWidth / innerHeight;
+    const n = nodes[start];
+    const th = await this.tex(n.thumb);
+    if (!this.active) return;
+    if (!th) { this.onLoad?.(false); return; }
+    this.setMesh(this.sphere(th));
+    this.span = Math.PI * 2; this.vspan = Math.PI;
+    this.tFov = this.fov = IS_MOBILE ? (this.camera.aspect < 1 ? 100 : 80) : 72;
+    this.camera.fov = this.fov; this.camera.updateProjectionMatrix();
+    this.yaw = this.tYaw = start === 'balcony' ? -0.5 : 0; this.pitch = this.tPitch = -0.1;
+    if (start === 'balcony') {
+      gsap.delayedCall(0.6, () => { if (this.active && !this.drag) this.tYaw = 0.35; });
+      gsap.delayedCall(2.4, () => { if (this.active && !this.drag) this.tYaw = 0; });
+    }
+    this.onLoad?.(true);
+    this.onNode?.(start);
+    this.drawHotspots();
+    this.sharpen(start);
+    this.prefetch(start);
+  }
+
+  private async sharpen(id: string) {
+    const n = this.tour?.nodes[id];
+    if (!n) return;
+    const t = await this.tex(n.src);
+    if (!t || !this.active || this.tour?.cur !== id || !this.mesh) return;
+    const m = this.mesh.material as THREE.MeshBasicMaterial;
+    m.map = t; m.needsUpdate = true;
+  }
+
+  private prefetch(id: string) {
+    const n = this.tour?.nodes[id];
+    if (!n) return;
+    // neighbours' previews first (instant moves), then their full images in the background
+    n.hs.forEach((h) => { const nn = this.tour!.nodes[h.to]; if (nn) this.tex(nn.thumb); });
+    setTimeout(() => n.hs.forEach((h) => { const nn = this.tour?.nodes[h.to]; if (nn) this.tex(nn.src); }), 1500);
+  }
+
+  /** walk to another node: turn toward it, push in, cross-fade; all nodes share one orientation so the view stays continuous */
+  async goNode(id: string) {
+    if (!this.tour || this.moving || id === this.tour.cur) return;
+    const n = this.tour.nodes[id];
+    if (!n) return;
+    this.moving = true;
+    const from = this.tour.nodes[this.tour.cur];
+    const h = from.hs.find((x) => x.to === id);
+    if (h && this.mesh) {
+      const p = this.hsPoint(h.u, h.v).sub(this.camera.position).normalize();
+      const yaw = Math.atan2(p.x, -p.z);
+      let d = yaw - this.tYaw; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI;
+      this.tYaw += d; this.tPitch = -0.08;
+    }
+    this.tour.cur = id;
+    this.hsLayer.innerHTML = '';
+    const tex = (await Promise.race([this.tex(n.src), new Promise<null>((r) => setTimeout(() => r(null), 120))])) || (await this.tex(n.thumb));
+    if (!tex || !this.active) { this.moving = false; return; }
+    const next = this.sphere(tex, 0);
+    next.renderOrder = 1;
+    this.scene.add(next);
+    const f0 = this.tFov;
+    this.tFov = Math.max(40, f0 - 18);
+    await new Promise<void>((res) => gsap.to(next.material as THREE.MeshBasicMaterial, { opacity: 1, duration: 0.7, ease: 'power2.inOut', onComplete: () => res() }));
+    (next.material as THREE.MeshBasicMaterial).transparent = false;
+    next.renderOrder = 0;
+    this.setMesh(next);
+    this.tFov = f0;
+    this.moving = false;
+    this.onNode?.(id);
+    this.drawHotspots();
+    this.sharpen(id);
+    this.prefetch(id);
+  }
+
+  private hsPoint(u: number, v: number) {
+    const ph = u * Math.PI * 2, th = v * Math.PI;
+    const p = new THREE.Vector3(Math.cos(ph) * Math.sin(th), Math.cos(th), Math.sin(ph) * Math.sin(th)).multiplyScalar(9.5);
+    this.mesh!.updateMatrixWorld();
+    return this.mesh!.localToWorld(p);
+  }
+
+  private hsEls: { el: HTMLElement; p: THREE.Vector3 }[] = [];
+  private drawHotspots() {
+    this.hsLayer.innerHTML = '';
+    this.hsEls = [];
+    if (!this.tour || !this.mesh) return;
+    const n = this.tour.nodes[this.tour.cur];
+    for (const h of n.hs) {
+      const to = this.tour.nodes[h.to];
+      if (!to) continue;
+      const b = document.createElement('button');
+      b.className = 'hs';
+      b.innerHTML = `<i></i><span>${to.label}</span>`;
+      b.onclick = (e) => { e.stopPropagation(); this.goNode(h.to); };
+      this.hsLayer.appendChild(b);
+      this.hsEls.push({ el: b, p: this.hsPoint(h.u, h.v) });
+    }
+    this.placeHotspots();
+  }
+
+  private placeHotspots() {
+    if (!this.hsEls.length) return;
+    this.camera.updateMatrixWorld();
+    const v = new THREE.Vector3();
+    for (const { el, p } of this.hsEls) {
+      v.copy(p).project(this.camera);
+      const vis = v.z < 1 && Math.abs(v.x) < 1.15 && Math.abs(v.y) < 1.15;
+      el.style.opacity = vis ? '1' : '0';
+      el.style.pointerEvents = vis ? 'auto' : 'none';
+      el.style.transform = `translate(${((v.x + 1) / 2) * innerWidth}px, ${((1 - v.y) / 2) * innerHeight}px) translate(-50%, -50%)`;
+    }
+  }
+
   close() {
+    this.tour = undefined;
+    this.hsLayer.innerHTML = '';
+    this.hsEls = [];
     this.active = false;
     this.gyro = undefined;
     removeEventListener('deviceorientation', this.onOrient);
@@ -144,5 +307,6 @@ export class RealView {
     this.fov += (this.tFov - this.fov) * 0.12;
     this.camera.quaternion.setFromEuler(new THREE.Euler(this.pitch, -this.yaw, 0, 'YXZ'));
     if (Math.abs(this.camera.fov - this.fov) > 0.01) { this.camera.fov = this.fov; this.camera.updateProjectionMatrix(); }
+    this.placeHotspots();
   }
 }

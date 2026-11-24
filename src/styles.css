@@ -389,3 +389,31 @@ body.photo #labels, body.photo .labels { display: none !important; }
 @media (min-width: 861px) {
   body.photo #dock { right: auto; left: calc(50% + 228px); bottom: calc(18px + var(--safe-b)); flex-direction: row; }
 }
+
+/* ---------------------------------------------------------------- 360 walkthrough hotspots */
+#tourHs { position: fixed; inset: 0; pointer-events: none; z-index: 6; }
+#tourHs .hs { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  background: none; border: 0; padding: 6px; cursor: pointer; transition: opacity .25s; -webkit-tap-highlight-color: transparent; }
+#tourHs .hs i { width: 54px; height: 54px; border-radius: 50%; border: 3px solid rgba(255,255,255,.95);
+  background: radial-gradient(circle, rgba(255,255,255,.55) 0 22%, rgba(255,255,255,.12) 23% 100%);
+  box-shadow: 0 4px 18px rgba(0,0,0,.35), inset 0 0 0 1px rgba(0,0,0,.08); transform: perspective(120px) rotateX(52deg);
+  animation: hsPulse 2.2s ease-in-out infinite; }
+#tourHs .hs span { font: 600 12.5px/1 var(--font, system-ui); color: #fff; background: rgba(12,16,22,.62); padding: 6px 10px;
+  border-radius: 999px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); white-space: nowrap; letter-spacing: .01em; }
+#tourHs .hs:hover i, #tourHs .hs:focus-visible i { background: radial-gradient(circle, #fff 0 26%, rgba(255,255,255,.3) 27% 100%); }
+@keyframes hsPulse { 0%,100% { transform: perspective(120px) rotateX(52deg) scale(1); } 50% { transform: perspective(120px) rotateX(52deg) scale(1.12); } }
+body:not(.bal) #tourHs { display: none; }
+.rchips { display: flex; gap: 6px; margin-top: 10px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+.rchips::-webkit-scrollbar { display: none; }
+.rchip { flex: 0 0 auto; font: 600 12px/1 var(--font, system-ui); padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.08); color: inherit; cursor: pointer; }
+.rchip.on { background: #fff; color: #111; border-color: #fff; }
+@media (max-width: 720px) {
+  #tourHs .hs i { width: 46px; height: 46px; }
+  #tourHs .hs span { font-size: 12px; }
+}
+@media (max-width: 720px) {
+  body.bal #hud small { display: none; }
+  body.bal #hud h3 { font-size: 18px; }
+  body.bal #hud > div { min-width: 0; max-width: 100%; }
+}

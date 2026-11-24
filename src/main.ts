@@ -7,7 +7,7 @@ import { Ground } from './scene/Ground';
 import { Context } from './scene/Context';
 import { Trees } from './scene/Trees';
 import { Interior } from './scene/Interior';
-import { RealView } from './scene/RealView';
+import { RealView, type TourNode } from './scene/RealView';
 import { PhotoOrbit, type Kind as PhotoKind } from './scene/PhotoOrbit';
 import { SITE, PROJECT, PLANS, GALLERY, SAMPLE_FLAT, PLAN_IMG } from './data/project';
 import { UNITS, UNIT_BY_ID, TOWERS, DIR_NAME, unitsOf, type Unit } from './data/units';
@@ -280,7 +280,8 @@ function renderCard() {
         <div><small>${t('type')}</small><b>2 BHK · ${u.type}</b><small>${PLANS[u.type].rooms.filter((r) => r.kind === 'toilet').length} toilets${PLANS[u.type].rooms.some((r) => r.kind === 'balcony') ? ' · balcony' : ''}</small></div>
       </div>
       <div class="actions">
-        ${u.tower === 'A' || u.tower === 'B' ? `<button class="btn primary wide" id="aBal">${icon('eye')}${t('balcony14')}</button>` : ''}
+        <button class="btn primary wide" id="aTour">${icon('eye')}${t('walkthrough')}</button>
+        ${u.tower === 'A' || u.tower === 'B' ? `<button class="btn wide" id="aBal">${icon('img')}${t('balcony14')}</button>` : ''}
         <button class="btn" id="aPlan">${icon('plan')}${t('floorPlan')}</button>
         <button class="btn" id="aCost">${icon('calc')}${t('costSheet')}</button>
         <button class="btn" id="a3d">${icon('cube')}${t('interior3d')}</button>
@@ -290,7 +291,8 @@ function renderCard() {
     </div>`;
   $('#cardX').onclick = () => { S.unit = null; S.mode = 'tower'; refreshFloor(); orbit.focus(null); syncPhoto(); renderCard(); renderCtx(); syncHash(); };
   const ab = document.getElementById('aBal');
-  if (ab) ab.onclick = () => openBalconyView();
+  if (ab) ab.onclick = () => openBalconyView('balcony');
+  $('#aTour').onclick = () => openBalconyView('living');
   $('#a3d').onclick = () => openInterior(u.type);
   $('#aPlan').onclick = () => openPlan(u);
   $('#aCost').onclick = () => openCost(u);
@@ -395,9 +397,23 @@ function refreshFloor() {
 const BALCONY = { src: IS_MOBILE ? '/site/pano/vp360_A14_m.jpg' : '/site/pano/vp360_A14.jpg', tower: 'A', floor: 14 };
 const BAL_UNIT = UNITS.find((u) => u.tower === BALCONY.tower && u.floor === BALCONY.floor && u.flat.views.some((v) => v.dir === 'E'))!;
 let balReturn: { unit: string | null; tower: string | null; floor: number | null } | null = null;
-async function openBalconyView() {
+let TOUR: Record<string, TourNode> | null = null;
+const tourReady = fetch(`/site/tour/tour.json?v=${__BUILD__}`).then((r) => (r.ok ? r.json() : null)).then((j) => {
+  if (!j) return null;
+  const base = IS_MOBILE ? j.mobileBase : j.base;
+  TOUR = {};
+  for (const [id, n] of Object.entries<{ label: string; hs: TourNode['hs'] }>(j.nodes)) {
+    TOUR[id] = { id, label: n.label, hs: n.hs, src: `${base}/${id}.jpg?v=${j.v}`, thumb: `${j.thumbBase}/${id}.jpg?v=${j.v}` };
+  }
+  // warm the first image so the balcony opens instantly
+  new Image().src = TOUR.balcony?.thumb ?? '';
+  return TOUR;
+}).catch(() => null);
+let tourAt = 'balcony';
+realView.onNode = (id) => { tourAt = id; if (S.mode === 'balcony') { renderHud(); syncHash(); } };
+async function openBalconyView(start = 'balcony') {
   stopTour();
-  if (S.mode === 'balcony') return;
+  if (S.mode === 'balcony') { if (TOUR) realView.goNode(start); return; }
   if (S.mode === 'interior') interior.close();
   balReturn = { unit: S.unit, tower: S.tower, floor: S.floor };
   S.mode = 'balcony';
@@ -411,17 +427,22 @@ async function openBalconyView() {
   const out = pose.look.clone().sub(pose.pos).setY(0).normalize();
   const approach = pose.pos.clone().addScaledVector(out, 26).setY(pose.pos.y + 6);
   $('#balFade').classList.add('on');
-  await world.flyTo(approach, pose.pos, 2.0, 'power2.inOut');
-  if (S.mode !== 'balcony') { $('#balFade').classList.remove('on'); return; }
-  await world.flyTo(pose.pos, pose.look, 0.9, 'power1.in');
-  if (S.mode !== 'balcony') { $('#balFade').classList.remove('on'); return; }
+  if (start === 'balcony' && !photoActive()) {
+    await world.flyTo(approach, pose.pos, 2.0, 'power2.inOut');
+    if (S.mode !== 'balcony') { $('#balFade').classList.remove('on'); return; }
+    await world.flyTo(pose.pos, pose.look, 0.9, 'power1.in');
+    if (S.mode !== 'balcony') { $('#balFade').classList.remove('on'); return; }
+  }
   $('#balFade').classList.add('white');
   await new Promise((r) => setTimeout(r, 250));
-  await realView.open(BALCONY.src, 'sphere');
+  const tour = await tourReady;
+  orbit.close();
+  if (tour && tour[start]) await realView.openTour(tour, start);
+  else await realView.open(BALCONY.src, 'sphere');
   $('#balFade').classList.remove('white', 'on');
   if (S.mode !== 'balcony') { realView.close(); return; }
   renderHud();
-  hint(IS_MOBILE ? `${t('lookAround')} · ${t('movePhone')}` : t('lookAround'), 4500);
+  hint(start === 'balcony' ? (IS_MOBILE ? `${t('lookAround')} · ${t('turnInside')}` : `${t('lookAround')} · ${t('turnInside')}`) : t('tapToWalk'), 5000);
 }
 function exitBalcony() {
   realView.close();
@@ -457,9 +478,14 @@ function renderHud(type?: string) {
   if (S.mode === 'balcony') {
     h.classList.remove('hidden');
     chips.classList.toggle('hidden', !IS_MOBILE || !realView.active);
-    h.innerHTML = `<div><div class="eyebrow">📷 ${t('balcony14')}</div><h3>${t('balconyAB')}</h3>
-      <small>${t('balconyNote')}</small></div>
+    const tn = realView.tour ? realView.tour.nodes : null;
+    const cur = realView.tour?.cur ?? 'balcony';
+    const rooms = tn ? Object.values(tn).map((n) => `<button class="rchip${n.id === cur ? ' on' : ''}" data-node="${n.id}">${n.label}</button>`).join('') : '';
+    h.innerHTML = `<div><div class="eyebrow">${cur === 'balcony' ? `📷 ${t('balcony14')}` : `🏠 ${t('demoFlat')}`}</div><h3>${cur === 'balcony' ? t('balconyAB') : tn?.[cur]?.label ?? ''}</h3>
+      <small>${cur === 'balcony' ? t('balconyNote') : t('demoNote')}</small>
+      ${rooms ? `<div class="rchips">${rooms}</div>` : ''}</div>
       <button class="btn sm exitb" id="hudX" aria-label="${t('exitView')}">✕ ${t('close')}</button>`;
+    h.querySelectorAll<HTMLElement>('[data-node]').forEach((b) => (b.onclick = () => realView.goNode(b.dataset.node!)));
     chips.innerHTML = `<button class="chip" id="gyro">📱 ${t('movePhone')}</button>`;
     const gy = document.getElementById('gyro');
     if (gy) gy.onclick = async () => { const ok = await realView.enableGyro(); gy.classList.toggle('on', ok); toast(ok ? t('movePhone') : t('gyroNo')); };
@@ -968,13 +994,13 @@ function syncHash() {
   if (S.tower) h += `tower/${S.tower}`;
   if (S.floor) h += `/${S.floor}`;
   if (S.unit) h += `/${S.unit}`;
-  if (S.mode === 'balcony') h = '#/balcony';
+  if (S.mode === 'balcony') h = tourAt === 'balcony' ? '#/balcony' : `#/balcony/${tourAt}`;
   if (S.mode === 'interior') h += '/interior';
   if (location.hash !== h) history.replaceState(null, '', h);
 }
 function route() {
   const p = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
-  if (p[0] === 'balcony') { openBalconyView(); return; }
+  if (p[0] === 'balcony') { openBalconyView(p[1] || 'balcony'); return; }
   if (p[0] === 'tour') { droneTour(); return; }
   if (p[0] === 'tower' && p[1] && TOWERS.includes(p[1])) {
     const f = p[2] ? +p[2] : null;
